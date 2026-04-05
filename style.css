@@ -1311,7 +1311,10 @@ kbd {
   .col-center,
   .col-right {
     position: absolute;
-    inset: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: var(--mobile-nav-h); /* réserve la place du footer fixé */
     width: 100%;
     border: none;
     display: none;
@@ -1320,12 +1323,6 @@ kbd {
   .col-center.mobile-active,
   .col-right.mobile-active {
     display: flex;
-  }
-  .col-right.mobile-active {
-    display: flex;
-  }
-  .app-body {
-    padding-bottom: var(--mobile-nav-h);
   }
   /* Sur mobile : l'app-footer desktop est caché, tout passe dans mobile-nav */
   .app-footer { display: none; }
