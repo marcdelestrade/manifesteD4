@@ -178,7 +178,8 @@ a:hover {
 .app {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100vh; /* fallback navigateurs anciens */
+  height: 100dvh; /* dynamic viewport : s'ajuste à la barre Safari iOS */
 }
 
 /* Header */
