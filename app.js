@@ -46,6 +46,8 @@ const el = {
   btnNext: $("#btn-next"),
   prevTitle: $("#prev-title"),
   nextTitle: $("#next-title"),
+  btnPrevMobile: $("#btn-prev-mobile"),
+  btnNextMobile: $("#btn-next-mobile"),
   countTaches: $("#count-taches"),
   countProjets: $("#count-projets"),
 };
@@ -327,6 +329,8 @@ function updateNavButtons() {
 
   el.btnPrev.disabled = !prev;
   el.btnNext.disabled = !next;
+  el.btnPrevMobile.disabled = !prev;
+  el.btnNextMobile.disabled = !next;
   el.prevTitle.textContent = prev ? prev.titre : "—";
   el.nextTitle.textContent = next ? next.titre : "—";
   el.btnPrev.dataset.targetId = prev?.id || "";
@@ -471,6 +475,9 @@ function bindUI() {
   el.btnToggleMode.addEventListener("click", toggleEditMode);
   el.btnPrev.addEventListener("click", () => navigateRelative(-1));
   el.btnNext.addEventListener("click", () => navigateRelative(1));
+  el.btnPrevMobile.addEventListener("click", () => navigateRelative(-1));
+  el.btnNextMobile.addEventListener("click", () => navigateRelative(1));
+  $("#btn-settings-mobile").addEventListener("click", showConfig);
   $("#btn-add-section").addEventListener("click", addSection);
 
   // Toolbar reflète le mode initial (lecture)

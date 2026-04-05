@@ -74,6 +74,9 @@ a:hover {
 .hidden {
   display: none !important;
 }
+.mobile-only {
+  display: none;
+}
 
 /* =========================================================================
    ÉCRAN DE CONFIGURATION
@@ -1322,14 +1325,11 @@ kbd {
     display: flex;
   }
   .app-body {
-    padding-bottom: 0;
+    padding-bottom: var(--mobile-nav-h);
   }
-  /* Footer compact sur mobile : masquer les titres, garder flèches + icônes */
-  .app-footer { height: 44px; }
-  .nav-btn { padding: 4px 8px; gap: 6px; }
-  .nav-label { display: none; }
-  .nav-arrow { font-size: 20px; }
-  .footer-actions { padding: 0 4px; gap: 0; }
+  /* Sur mobile : l'app-footer desktop est caché, tout passe dans mobile-nav */
+  .app-footer { display: none; }
+  .mobile-only { display: inline-flex !important; }
   .mobile-nav {
     display: flex;
     position: fixed;
@@ -1345,9 +1345,24 @@ kbd {
     flex: 1;
     font-size: 20px;
     color: var(--c-text-soft);
+    min-width: 0;
   }
   .mobile-nav-btn.active {
     color: var(--c-accent);
+  }
+  /* Flèches prev/next aux extrémités de la mobile-nav */
+  .mobile-nav-btn.nav-edge {
+    font-size: 28px;
+    font-weight: 400;
+    color: var(--c-accent);
+    line-height: 1;
+  }
+  .mobile-nav-btn.nav-edge:disabled {
+    opacity: 0.25;
+    color: var(--c-text-soft);
+  }
+  .mobile-nav-btn.nav-edge:active:not(:disabled) {
+    background: var(--c-active);
   }
   /* Éditeur : preview seul par défaut sur mobile */
   .editor-split {

@@ -55,6 +55,7 @@
         </div>
         <div class="header-right">
           <span id="save-indicator" class="save-indicator">Prêt</span>
+          <button id="btn-settings-mobile" class="btn-icon mobile-only" title="Configuration" aria-label="Configuration">⚙</button>
         </div>
       </header>
 
@@ -203,11 +204,13 @@
         </button>
       </footer>
 
-      <!-- Navigation mobile -->
+      <!-- Navigation mobile (fusion : prev/next + colonnes) -->
       <nav class="mobile-nav" id="mobile-nav">
-        <button class="mobile-nav-btn active" data-col="left" aria-label="Table des matières">☰</button>
+        <button class="mobile-nav-btn nav-edge" id="btn-prev-mobile" aria-label="Section précédente">‹</button>
+        <button class="mobile-nav-btn" data-col="left" aria-label="Table des matières">☰</button>
         <button class="mobile-nav-btn" data-col="center" aria-label="Espace de travail">📄</button>
         <button class="mobile-nav-btn" data-col="right" aria-label="Assistant IA">✦</button>
+        <button class="mobile-nav-btn nav-edge" id="btn-next-mobile" aria-label="Section suivante">›</button>
       </nav>
     </div>
 
