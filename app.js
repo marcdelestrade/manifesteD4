@@ -42,6 +42,10 @@ const el = {
   btnToggleMode: $("#btn-toggle-mode"),
   editorSplit: $("#editor-split"),
   editorToolbarEl: $(".editor-toolbar"),
+  btnPrev: $("#btn-prev"),
+  btnNext: $("#btn-next"),
+  prevTitle: $("#prev-title"),
+  nextTitle: $("#next-title"),
   countTaches: $("#count-taches"),
   countProjets: $("#count-projets"),
 };
@@ -302,6 +306,50 @@ function selectSection(id) {
   renderTaches();
   renderProjets();
   onAssistantSection();
+  updateNavButtons();
+}
+
+// =========================================================================
+// NAVIGATION PREV / NEXT
+// =========================================================================
+function getNavList() {
+  // Liste des sections navigables (non archivées), ordre hiérarchique
+  return sortHierarchically([...state.manifeste.data.sections]).filter(
+    (s) => !s.archive
+  );
+}
+
+function updateNavButtons() {
+  const list = getNavList();
+  const idx = list.findIndex((s) => s.id === state.activeSectionId);
+  const prev = idx > 0 ? list[idx - 1] : null;
+  const next = idx >= 0 && idx < list.length - 1 ? list[idx + 1] : null;
+
+  el.btnPrev.disabled = !prev;
+  el.btnNext.disabled = !next;
+  el.prevTitle.textContent = prev ? prev.titre : "—";
+  el.nextTitle.textContent = next ? next.titre : "—";
+  el.btnPrev.dataset.targetId = prev?.id || "";
+  el.btnNext.dataset.targetId = next?.id || "";
+  el.btnPrev.title = prev
+    ? `Précédent : ${prev.titre} (←)`
+    : "Aucune section avant";
+  el.btnNext.title = next
+    ? `Suivant : ${next.titre} (→)`
+    : "Aucune section après";
+}
+
+function navigateRelative(delta) {
+  const list = getNavList();
+  const idx = list.findIndex((s) => s.id === state.activeSectionId);
+  const target = list[idx + delta];
+  if (target) {
+    selectSection(target.id);
+    // Scroller la TOC pour garder la section active visible
+    document
+      .querySelector(`.toc-item[data-id="${target.id}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+  }
 }
 
 // =========================================================================
@@ -338,6 +386,7 @@ async function openSectionMenu(e, section) {
     section.archive = !section.archive;
     section.updated_at = now();
     renderTOC();
+    updateNavButtons();
     try {
       await saveDataFile(
         "manifeste",
@@ -361,6 +410,7 @@ async function openSectionMenu(e, section) {
     [section.ordre, other.ordre] = [other.ordre, section.ordre];
     section.updated_at = other.updated_at = now();
     renderTOC();
+    updateNavButtons();
     try {
       await saveDataFile("manifeste", `Réordonnancement ${section.id}`);
     } catch (err) {
@@ -419,6 +469,8 @@ function bindUI() {
   $("#btn-help").addEventListener("click", showShortcuts);
   $("#btn-print").addEventListener("click", openPrintView);
   el.btnToggleMode.addEventListener("click", toggleEditMode);
+  el.btnPrev.addEventListener("click", () => navigateRelative(-1));
+  el.btnNext.addEventListener("click", () => navigateRelative(1));
   $("#btn-add-section").addEventListener("click", addSection);
 
   // Toolbar reflète le mode initial (lecture)
@@ -478,21 +530,18 @@ function handleShortcuts(e) {
     return;
   }
 
-  // j/k : navigation dans la TOC (hors input)
-  if (!isInput && !mod && (e.key === "j" || e.key === "k")) {
-    e.preventDefault();
-    navigateTOC(e.key === "j" ? 1 : -1);
-    return;
-  }
-}
-
-function navigateTOC(direction) {
-  const items = $$(".toc-item");
-  const idx = items.findIndex((i) => i.dataset.id === state.activeSectionId);
-  const next = items[Math.max(0, Math.min(items.length - 1, idx + direction))];
-  if (next) {
-    selectSection(next.dataset.id);
-    next.scrollIntoView({ block: "nearest" });
+  // j/k ou flèches ← → : navigation dans les sections (hors input)
+  if (!isInput && !mod) {
+    if (e.key === "j" || e.key === "ArrowRight") {
+      e.preventDefault();
+      navigateRelative(1);
+      return;
+    }
+    if (e.key === "k" || e.key === "ArrowLeft") {
+      e.preventDefault();
+      navigateRelative(-1);
+      return;
+    }
   }
 }
 
@@ -531,7 +580,7 @@ function showShortcuts() {
   const rows = [
     ["Sauvegarder", "⌘ S"],
     ["Rechercher dans la TOC", "⌘ K"],
-    ["Section précédente / suivante", "K / J"],
+    ["Section précédente / suivante", "← / → ou K / J"],
     ["Onglet Manifeste / Tâches / Projets / Générer", "⌘ 1-4"],
     ["Basculer Lecture / Édition", "⌘ E"],
     ["Envoyer à l'assistant IA", "⌘ Entrée"],

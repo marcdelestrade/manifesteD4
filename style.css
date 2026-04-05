@@ -1180,6 +1180,87 @@ a:hover {
   align-items: center;
   padding: 4px 0;
 }
+/* =========================================================================
+   FOOTER — navigation sections + actions globales
+   ========================================================================= */
+.app-footer {
+  height: 52px;
+  background: var(--c-surface);
+  border-top: 1px solid var(--c-border);
+  display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  padding: 0 8px;
+  gap: 8px;
+}
+
+/* Boutons nav prev/next */
+.nav-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  min-width: 0;
+  color: var(--c-text-soft);
+  border-radius: var(--radius-sm);
+  max-width: 320px;
+  transition: background 0.15s, color 0.15s;
+}
+.nav-btn:hover:not(:disabled) {
+  background: var(--c-hover);
+  color: var(--c-text);
+}
+.nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.nav-prev { justify-content: flex-start; text-align: left; }
+.nav-next { justify-content: flex-end; text-align: right; }
+.nav-arrow {
+  font-size: 18px;
+  line-height: 1;
+  color: var(--c-accent);
+  flex-shrink: 0;
+}
+.nav-btn:disabled .nav-arrow { color: var(--c-text-soft); }
+.nav-label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  overflow: hidden;
+}
+.nav-next .nav-label { align-items: flex-end; }
+.nav-hint {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--c-text-soft);
+  font-weight: 500;
+}
+.nav-title {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--c-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.nav-btn:disabled .nav-title { color: var(--c-text-soft); }
+
+/* Actions globales au centre */
+.footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 8px;
+  border-left: 1px solid var(--c-border);
+  border-right: 1px solid var(--c-border);
+  flex-shrink: 0;
+}
+
 kbd {
   display: inline-block;
   padding: 2px 6px;
@@ -1241,8 +1322,14 @@ kbd {
     display: flex;
   }
   .app-body {
-    padding-bottom: var(--mobile-nav-h);
+    padding-bottom: 0;
   }
+  /* Footer compact sur mobile : masquer les titres, garder flèches + icônes */
+  .app-footer { height: 44px; }
+  .nav-btn { padding: 4px 8px; gap: 6px; }
+  .nav-label { display: none; }
+  .nav-arrow { font-size: 20px; }
+  .footer-actions { padding: 0 4px; gap: 0; }
   .mobile-nav {
     display: flex;
     position: fixed;
