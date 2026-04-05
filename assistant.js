@@ -3,9 +3,12 @@
    Streaming Anthropic + injection de contexte + mémorisation de décisions.
    ========================================================================= */
 
-import { state, saveDataFile, activeSection, uid, now } from "./store.js?v=1775399137";
-import { streamMessage } from "./anthropic.js?v=1775399137";
-import { toast, promptDialog } from "./ui.js?v=1775399137";
+import { state, saveDataFile, activeSection, uid, now } from "./store.js?v=1775399811";
+
+const MAX_MESSAGES = 20; // 10 échanges max par section (cap des coûts tokens)
+const PERSIST_DEBOUNCE_MS = 3000;
+import { streamMessage } from "./anthropic.js?v=1775399811";
+import { toast, promptDialog } from "./ui.js?v=1775399811";
 
 const SUGGESTIONS = [
   "Challenge ce contenu",
@@ -17,6 +20,7 @@ const SUGGESTIONS = [
 let el = {};
 let isStreaming = false;
 let rafPending = null;
+let persistTimer = null;
 
 export function initAssistant() {
   el = {
@@ -37,17 +41,18 @@ export function initAssistant() {
       onSend();
     }
   });
-  el.clear.addEventListener("click", () => {
-    state.aiMessages = [];
-    renderMessages();
-  });
+  el.clear.addEventListener("click", clearConversation);
 }
 
 export function onSectionChanged() {
-  // Reset conversation à chaque changement de section — contexte neuf.
-  state.aiMessages = [];
+  // Charger la conversation persistée pour la section active (si elle existe)
+  const sectionId = state.activeSectionId;
+  const bySection = state.conversations?.data?.bySection || {};
+  const saved = sectionId ? bySection[sectionId] : null;
+  state.aiMessages = saved?.messages ? [...saved.messages] : [];
   renderMessages();
   renderSuggestions();
+  renderPersistenceHeader();
 }
 
 function renderSuggestions() {
@@ -74,12 +79,33 @@ function renderIntro() {
   return intro;
 }
 
+/** Affiche un indicateur en haut de la zone messages si des échanges sont persistés. */
+function renderPersistenceHeader() {
+  const count = state.aiMessages.length;
+  const existing = el.messages.querySelector(".ai-persist-header");
+  if (count === 0) {
+    existing?.remove();
+    return;
+  }
+  const exchanges = Math.ceil(count / 2);
+  if (existing) {
+    existing.querySelector(".ai-persist-count").textContent =
+      `${exchanges} échange${exchanges > 1 ? "s" : ""} persisté${exchanges > 1 ? "s" : ""}`;
+    return;
+  }
+  const header = document.createElement("div");
+  header.className = "ai-persist-header";
+  header.innerHTML = `<span class="ai-persist-count">${exchanges} échange${exchanges > 1 ? "s" : ""} persisté${exchanges > 1 ? "s" : ""}</span>`;
+  el.messages.prepend(header);
+}
+
 function renderMessages() {
   el.messages.innerHTML = "";
   if (state.aiMessages.length === 0) {
     el.messages.appendChild(renderIntro());
     return;
   }
+  renderPersistenceHeader();
   for (const m of state.aiMessages) {
     el.messages.appendChild(renderMessage(m));
   }
@@ -207,6 +233,57 @@ async function onSend() {
   } finally {
     isStreaming = false;
     el.send.disabled = false;
+    trimAndSchedulePersist();
+    renderPersistenceHeader();
+  }
+}
+
+/** Tronque à MAX_MESSAGES + planifie la sauvegarde GitHub (debounce). */
+function trimAndSchedulePersist() {
+  if (state.aiMessages.length > MAX_MESSAGES) {
+    state.aiMessages = state.aiMessages.slice(-MAX_MESSAGES);
+  }
+  if (persistTimer) clearTimeout(persistTimer);
+  persistTimer = setTimeout(persistConversation, PERSIST_DEBOUNCE_MS);
+}
+
+async function persistConversation() {
+  persistTimer = null;
+  const sectionId = state.activeSectionId;
+  if (!sectionId || !state.conversations) return;
+  const data = state.conversations.data;
+  data.bySection = data.bySection || {};
+  // Ne persister que les messages finalisés (streaming: false)
+  const messages = state.aiMessages
+    .filter((m) => !m.streaming)
+    .map((m) => ({ role: m.role, content: m.content }));
+  if (messages.length === 0) {
+    delete data.bySection[sectionId];
+  } else {
+    data.bySection[sectionId] = { messages, updated_at: now() };
+  }
+  try {
+    await saveDataFile("conversations", `Conversation ${sectionId}`);
+  } catch (err) {
+    console.error("Persist conversation failed:", err);
+  }
+}
+
+async function clearConversation() {
+  state.aiMessages = [];
+  renderMessages();
+  // Purger aussi côté GitHub
+  if (persistTimer) clearTimeout(persistTimer);
+  const sectionId = state.activeSectionId;
+  if (!sectionId || !state.conversations) return;
+  const data = state.conversations.data;
+  if (data.bySection?.[sectionId]) {
+    delete data.bySection[sectionId];
+    try {
+      await saveDataFile("conversations", `Clear conversation ${sectionId}`);
+    } catch (err) {
+      console.error(err);
+    }
   }
 }
 

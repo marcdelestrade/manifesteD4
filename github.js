@@ -95,7 +95,7 @@ export async function writeFile(cfg, path, data, sha, message) {
  * Renvoie { manifeste, taches, projets, memoire } avec data + sha chacun.
  */
 export async function loadAllData(cfg) {
-  const files = ["manifeste", "taches", "projets", "memoire"];
+  const files = ["manifeste", "taches", "projets", "memoire", "conversations"];
   const results = await Promise.all(
     files.map((name) => readFile(cfg, `data/${name}.json`))
   );

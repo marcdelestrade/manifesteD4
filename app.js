@@ -2,8 +2,8 @@
    app.js — Orchestration D4 Manifeste
    ========================================================================= */
 
-import * as gh from "./github.js?v=1775399137";
-import { createEditor } from "./editor.js?v=1775399137";
+import * as gh from "./github.js?v=1775399811";
+import { createEditor } from "./editor.js?v=1775399811";
 import {
   state,
   setStatusHandler,
@@ -11,13 +11,13 @@ import {
   activeSection,
   sortHierarchically,
   now,
-} from "./store.js?v=1775399137";
-import { initTaches, renderTaches } from "./taches.js?v=1775399137";
-import { initProjets, renderProjets } from "./projets.js?v=1775399137";
-import { initAssistant, onSectionChanged as onAssistantSection } from "./assistant.js?v=1775399137";
-import { initGenerer } from "./generer.js?v=1775399137";
-import { toast, confirmDialog, formDialog, actionMenu } from "./ui.js?v=1775399137";
-import { openPrintView } from "./print.js?v=1775399137";
+} from "./store.js?v=1775399811";
+import { initTaches, renderTaches } from "./taches.js?v=1775399811";
+import { initProjets, renderProjets } from "./projets.js?v=1775399811";
+import { initAssistant, onSectionChanged as onAssistantSection } from "./assistant.js?v=1775399811";
+import { initGenerer } from "./generer.js?v=1775399811";
+import { toast, confirmDialog, formDialog, actionMenu } from "./ui.js?v=1775399811";
+import { openPrintView } from "./print.js?v=1775399811";
 
 const CFG_KEY = "d4_manifeste_cfg_v1";
 
@@ -145,6 +145,7 @@ async function startApp() {
     state.taches = data.taches;
     state.projets = data.projets;
     state.memoire = data.memoire;
+    state.conversations = data.conversations;
   } catch (err) {
     setSaveStatus("error", "Erreur chargement");
     toast(`Impossible de charger les données : ${err.message}`, "error", 8000);

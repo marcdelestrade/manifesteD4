@@ -3,7 +3,7 @@
    Importé par tous les modules feature.
    ========================================================================= */
 
-import * as gh from "./github.js?v=1775399137";
+import * as gh from "./github.js?v=1775399811";
 
 export const state = {
   cfg: null, // { owner, repo, token, anthropicKey }
@@ -11,8 +11,9 @@ export const state = {
   taches: null, // { data: { taches: [] }, sha }
   projets: null, // { data: { projets: [] }, sha }
   memoire: null, // { data: {...}, sha }
+  conversations: null, // { data: { bySection: {...} }, sha }
   activeSectionId: null,
-  aiMessages: [], // conversation courante (reset à chaque changement de section)
+  aiMessages: [], // conversation de la section active (chargée depuis conversations.json)
 };
 
 let statusHandler = () => {};

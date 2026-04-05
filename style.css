@@ -679,6 +679,16 @@ a:hover {
   padding: 20px 10px;
   font-style: italic;
 }
+.ai-persist-header {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--c-text-soft);
+  padding: 4px 8px;
+  text-align: center;
+  border-bottom: 1px dashed var(--c-border);
+  margin-bottom: 6px;
+}
 .ai-msg {
   display: flex;
   flex-direction: column;
