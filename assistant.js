@@ -3,9 +3,9 @@
    Streaming Anthropic + injection de contexte + mémorisation de décisions.
    ========================================================================= */
 
-import { state, saveDataFile, activeSection, uid, now } from "./store.js?v=1775399826";
-import { streamMessage } from "./anthropic.js?v=1775399826";
-import { toast, promptDialog } from "./ui.js?v=1775399826";
+import { state, saveDataFile, activeSection, uid, now } from "./store.js?v=1775400456";
+import { streamMessage } from "./anthropic.js?v=1775400456";
+import { toast, promptDialog } from "./ui.js?v=1775400456";
 
 const MAX_MESSAGES = 20; // 10 échanges max par section (cap des coûts tokens)
 const PERSIST_DEBOUNCE_MS = 3000;
@@ -301,6 +301,11 @@ function scheduleBubbleUpdate(text) {
   });
 }
 
+/**
+ * Construit le prompt système sous forme de content block avec cache_control.
+ * Anthropic facture les tokens cachés à 10% du prix normal lors des ré-utilisations.
+ * Nécessite ≥1024 tokens pour activer le cache (sinon l'API l'ignore silencieusement).
+ */
 function buildSystemPrompt() {
   const section = activeSection();
   const m = state.memoire?.data || {};
@@ -320,7 +325,7 @@ function buildSystemPrompt() {
     .map((p) => `- [${p.statut}] ${p.nom} : ${p.description || ""}`)
     .join("\n") || "(aucun)";
 
-  return `Tu es l'assistant stratégique de Marc Delestrade, fondateur de D4 Immobilier.
+  const text = `Tu es l'assistant stratégique de Marc Delestrade, fondateur de D4 Immobilier.
 
 CONTEXTE D4 :
 ${m.contexte_general || "(contexte non renseigné)"}
@@ -346,4 +351,6 @@ PROJETS LIÉS :
 ${projetsSection}
 
 Tu dois challenger, conseiller, reformuler. Sois direct, précis, sans complaisance. Propose des alternatives concrètes. Si une idée est mauvaise, dis-le et explique pourquoi. Réponses courtes et structurées en markdown.`;
+
+  return [{ type: "text", text, cache_control: { type: "ephemeral" } }];
 }
