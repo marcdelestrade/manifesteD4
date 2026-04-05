@@ -2,8 +2,8 @@
    app.js — Orchestration D4 Manifeste
    ========================================================================= */
 
-import * as gh from "./github.js?v=1775413103";
-import { createEditor } from "./editor.js?v=1775413103";
+import * as gh from "./github.js?v=1775413327";
+import { createEditor } from "./editor.js?v=1775413327";
 import {
   state,
   setStatusHandler,
@@ -11,13 +11,14 @@ import {
   activeSection,
   sortHierarchically,
   now,
-} from "./store.js?v=1775413103";
-import { initTaches, renderTaches } from "./taches.js?v=1775413103";
-import { initProjets, renderProjets } from "./projets.js?v=1775413103";
-import { initAssistant, onSectionChanged as onAssistantSection } from "./assistant.js?v=1775413103";
-import { initGenerer } from "./generer.js?v=1775413103";
-import { toast, confirmDialog, formDialog, actionMenu } from "./ui.js?v=1775413103";
-import { openPrintView } from "./print.js?v=1775413103";
+} from "./store.js?v=1775413327";
+import { initTaches, renderTaches } from "./taches.js?v=1775413327";
+import { initProjets, renderProjets } from "./projets.js?v=1775413327";
+import { initAssistant, onSectionChanged as onAssistantSection } from "./assistant.js?v=1775413327";
+import { initGenerer } from "./generer.js?v=1775413327";
+import { toast, confirmDialog, formDialog, actionMenu } from "./ui.js?v=1775413327";
+import { openPrintView } from "./print.js?v=1775413327";
+import { openTasksView } from "./tasks-view.js?v=1775413327";
 
 const CFG_KEY = "d4_manifeste_cfg_v1";
 const LAST_SECTION_KEY = "d4_manifeste_last_section";
@@ -503,6 +504,7 @@ function bindUI() {
   });
   $("#btn-help").addEventListener("click", showShortcuts);
   $("#btn-print").addEventListener("click", openPrintView);
+  $("#btn-tasks-view").addEventListener("click", openTasksView);
   el.btnToggleMode.addEventListener("click", toggleEditMode);
   el.btnPrev.addEventListener("click", () => navigateRelative(-1));
   el.btnNext.addEventListener("click", () => navigateRelative(1));
