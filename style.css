@@ -946,6 +946,13 @@ a:hover {
   border-bottom: 1px solid var(--c-border);
   flex-shrink: 0;
 }
+.crud-header-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.crud-header-row #tache-quick-add { flex: 1; }
+
 #tache-quick-add {
   width: 100%;
   padding: 8px 10px;
