@@ -17,6 +17,7 @@ import { initProjets, renderProjets } from "./projets.js";
 import { initAssistant, onSectionChanged as onAssistantSection } from "./assistant.js";
 import { initGenerer } from "./generer.js";
 import { toast, confirmDialog, formDialog, actionMenu } from "./ui.js";
+import { openPrintView } from "./print.js";
 
 const CFG_KEY = "d4_manifeste_cfg_v1";
 
@@ -416,6 +417,7 @@ function bindUI() {
     showConfig();
   });
   $("#btn-help").addEventListener("click", showShortcuts);
+  $("#btn-print").addEventListener("click", openPrintView);
   el.btnToggleMode.addEventListener("click", toggleEditMode);
   $("#btn-add-section").addEventListener("click", addSection);
 
