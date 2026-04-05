@@ -106,26 +106,74 @@
             </div>
           </section>
 
-          <!-- Onglet Tâches (placeholder Phase 2) -->
+          <!-- Onglet Tâches -->
           <section class="tab-panel" id="tab-taches">
-            <div class="placeholder">Tâches — à venir (Phase 2)</div>
+            <div class="crud-header">
+              <input
+                type="text"
+                id="tache-quick-add"
+                placeholder="Nouvelle tâche — Entrée pour ajouter"
+              />
+            </div>
+            <div class="crud-list" id="taches-list"></div>
           </section>
 
-          <!-- Onglet Projets (placeholder Phase 2) -->
+          <!-- Onglet Projets -->
           <section class="tab-panel" id="tab-projets">
-            <div class="placeholder">Projets — à venir (Phase 2)</div>
+            <div class="crud-header">
+              <button class="btn-primary" id="btn-add-projet">＋ Nouveau projet</button>
+            </div>
+            <div class="crud-list" id="projets-list"></div>
           </section>
 
-          <!-- Onglet Générer (placeholder Phase 2) -->
+          <!-- Onglet Générer -->
           <section class="tab-panel" id="tab-generer">
-            <div class="placeholder">Générer du contenu dérivé — à venir (Phase 2)</div>
+            <div class="generer-controls">
+              <label>
+                Type de génération
+                <select id="generer-type">
+                  <option value="guide">Guide pratique (collaborateurs)</option>
+                  <option value="faq">FAQ (clients / CS)</option>
+                  <option value="html">Page HTML (site D4)</option>
+                  <option value="resume">Résumé exécutif</option>
+                  <option value="formation">Points de formation</option>
+                </select>
+              </label>
+              <label>
+                Précisions (optionnel)
+                <textarea
+                  id="generer-precisions"
+                  rows="2"
+                  placeholder="en insistant sur… / pour un public de…"
+                ></textarea>
+              </label>
+              <button class="btn-primary" id="btn-generer">Générer</button>
+            </div>
+            <div class="generer-result markdown-body" id="generer-result"></div>
+            <div class="generer-actions hidden" id="generer-actions">
+              <button class="btn-secondary" id="btn-copy">Copier</button>
+              <button class="btn-secondary" id="btn-dl-md">Télécharger .md</button>
+              <button class="btn-secondary" id="btn-dl-html">Télécharger .html</button>
+            </div>
           </section>
         </main>
 
-        <!-- Colonne droite : Assistant IA (placeholder Phase 2) -->
+        <!-- Colonne droite : Assistant IA -->
         <aside class="col-right" id="col-right">
-          <div class="ai-header">Assistant IA</div>
-          <div class="ai-placeholder">Assistant contextuel — à venir (Phase 2)</div>
+          <div class="ai-header">
+            <span>Assistant IA</span>
+            <button class="btn-icon" id="btn-ai-clear" title="Nouvelle conversation">↻</button>
+          </div>
+          <div class="ai-messages" id="ai-messages"></div>
+          <div class="ai-suggestions" id="ai-suggestions"></div>
+          <div class="ai-input-zone">
+            <textarea
+              id="ai-input"
+              rows="2"
+              placeholder="Poser une question… (Cmd+Entrée pour envoyer)"
+            ></textarea>
+            <button id="ai-send" class="btn-primary">Envoyer</button>
+          </div>
         </aside>
       </div>
 

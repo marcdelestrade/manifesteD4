@@ -1,25 +1,21 @@
 /* =========================================================================
-   app.js — Logique principale D4 Manifeste
-   État global + orchestration des modules.
+   app.js — Orchestration D4 Manifeste
    ========================================================================= */
 
 import * as gh from "./github.js";
 import { createEditor } from "./editor.js";
-
-// ---- État global
-const state = {
-  cfg: null, // { owner, repo, token, anthropicKey }
-  manifeste: null, // { data: { sections: [] }, sha: "..." }
-  taches: null,
-  projets: null,
-  memoire: null,
-  activeSectionId: null,
-  tocFilter: "all", // 'all' | 'actives'
-  tocSearch: "",
-  editor: null,
-  saveTimer: null,
-  isSaving: false,
-};
+import {
+  state,
+  setStatusHandler,
+  emitStatus,
+  saveDataFile,
+  activeSection,
+  now,
+} from "./store.js";
+import { initTaches, renderTaches } from "./taches.js";
+import { initProjets, renderProjets } from "./projets.js";
+import { initAssistant, onSectionChanged as onAssistantSection } from "./assistant.js";
+import { initGenerer } from "./generer.js";
 
 const CFG_KEY = "d4_manifeste_cfg_v1";
 
@@ -43,12 +39,23 @@ const el = {
   btnSettings: $("#btn-settings"),
   btnPreviewOnly: $("#btn-preview-only"),
   editorSplit: $("#editor-split"),
+  countTaches: $("#count-taches"),
+  countProjets: $("#count-projets"),
+};
+
+// Local state (non-shared)
+let localState = {
+  tocFilter: "all",
+  tocSearch: "",
+  editor: null,
+  saveTimer: null,
 };
 
 // =========================================================================
 // BOOT
 // =========================================================================
 function boot() {
+  setStatusHandler(setSaveStatus);
   const raw = localStorage.getItem(CFG_KEY);
   if (!raw) return showConfig();
   try {
@@ -66,8 +73,6 @@ function boot() {
 function showConfig() {
   el.configScreen.classList.remove("hidden");
   el.app.classList.add("hidden");
-
-  // Pré-remplir si config existante (depuis bouton ⚙)
   if (state.cfg) {
     $("#cfg-owner").value = state.cfg.owner || "";
     $("#cfg-repo").value = state.cfg.repo || "";
@@ -104,7 +109,13 @@ el.configForm.addEventListener("submit", async (e) => {
   el.cfgStatus.textContent = "Connexion OK. Chargement…";
   setTimeout(() => {
     el.configScreen.classList.add("hidden");
-    startApp();
+    // Re-démarrer (si l'app tournait déjà, les features sont déjà initialisées)
+    if (state.manifeste) {
+      el.app.classList.remove("hidden");
+    } else {
+      startApp();
+    }
+    el.cfgSubmit.disabled = false;
   }, 400);
 });
 
@@ -128,9 +139,17 @@ async function startApp() {
   }
 
   initEditor();
+  initTaches((count) => {
+    el.countTaches.textContent = count;
+  });
+  initProjets((count) => {
+    el.countProjets.textContent = count;
+  });
+  initAssistant();
+  initGenerer();
   renderTOC();
 
-  // Sélection auto : première section non-intro (H1 ou première section)
+  // Sélection auto : première section non archivée (H1 de préférence)
   const sections = state.manifeste.data.sections.filter((s) => !s.archive);
   const first = sections.find((s) => s.niveau === 1) || sections[0];
   if (first) selectSection(first.id);
@@ -143,7 +162,7 @@ async function startApp() {
 // EDITOR
 // =========================================================================
 function initEditor() {
-  state.editor = createEditor({
+  localState.editor = createEditor({
     textarea: el.editorTextarea,
     preview: el.editorPreview,
     toolbar: el.editorToolbar,
@@ -153,47 +172,26 @@ function initEditor() {
 
 function onEditorChange(value) {
   if (!state.activeSectionId) return;
-  // Debounce 2s puis sauvegarde
-  if (state.saveTimer) clearTimeout(state.saveTimer);
-  setSaveStatus("dirty", "Modifications non sauvées");
-  state.saveTimer = setTimeout(() => saveSectionContent(value), 2000);
+  if (localState.saveTimer) clearTimeout(localState.saveTimer);
+  setSaveStatus("dirty", "Non sauvé");
+  localState.saveTimer = setTimeout(() => saveSectionContent(value), 2000);
 }
 
 async function saveSectionContent(value) {
   if (!state.activeSectionId) return;
-  const section = state.manifeste.data.sections.find(
-    (s) => s.id === state.activeSectionId
-  );
+  const section = activeSection();
   if (!section) return;
   if (section.contenu === value) {
     setSaveStatus("saved", "Sauvegardé");
     return;
   }
   section.contenu = value;
-  section.updated_at = new Date().toISOString();
-  await saveManifeste(`Update section ${section.id}`);
-}
-
-async function saveManifeste(message) {
-  if (state.isSaving) return;
-  state.isSaving = true;
-  setSaveStatus("saving", "Sauvegarde…");
+  section.updated_at = now();
   try {
-    const newSha = await gh.writeFile(
-      state.cfg,
-      "data/manifeste.json",
-      state.manifeste.data,
-      state.manifeste.sha,
-      message
-    );
-    state.manifeste.sha = newSha;
-    setSaveStatus("saved", "Sauvegardé");
+    await saveDataFile("manifeste", `Update section ${section.id}`);
   } catch (err) {
     console.error(err);
-    setSaveStatus("error", "Erreur sauvegarde");
     alert(`Erreur sauvegarde : ${err.message}\n\nRecharger la page pour synchroniser.`);
-  } finally {
-    state.isSaving = false;
   }
 }
 
@@ -213,6 +211,7 @@ function renderTOC() {
 
     const dot = document.createElement("span");
     dot.className = `toc-status-dot ${s.archive ? "archive" : s.statut}`;
+    dot.title = "Clic droit pour changer le statut";
     item.appendChild(dot);
 
     const title = document.createElement("span");
@@ -231,19 +230,19 @@ function renderTOC() {
     }
 
     item.addEventListener("click", () => selectSection(s.id));
+    item.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      openSectionMenu(e, s);
+    });
     el.tocList.appendChild(item);
   }
 }
 
 function getFilteredSections() {
-  let list = [...state.manifeste.data.sections];
-  // Tri : par niveau 1 d'abord → puis parcours hiérarchique (ordre par parent)
-  list = sortHierarchically(list);
-
-  if (state.tocFilter === "actives") list = list.filter((s) => !s.archive);
-
-  if (state.tocSearch) {
-    const q = state.tocSearch.toLowerCase();
+  let list = sortHierarchically([...state.manifeste.data.sections]);
+  if (localState.tocFilter === "actives") list = list.filter((s) => !s.archive);
+  if (localState.tocSearch) {
+    const q = localState.tocSearch.toLowerCase();
     list = list.filter(
       (s) =>
         s.titre.toLowerCase().includes(q) ||
@@ -253,9 +252,6 @@ function getFilteredSections() {
   return list;
 }
 
-/**
- * Trie les sections hiérarchiquement : H1 > ses H2 > leurs H3 > H1 suivant…
- */
 function sortHierarchically(sections) {
   const byParent = {};
   for (const s of sections) {
@@ -263,7 +259,6 @@ function sortHierarchically(sections) {
     (byParent[key] ||= []).push(s);
   }
   for (const k in byParent) byParent[k].sort((a, b) => a.ordre - b.ordre);
-
   const result = [];
   const walk = (parentId) => {
     const children = byParent[parentId || "__root__"] || [];
@@ -277,49 +272,96 @@ function sortHierarchically(sections) {
 }
 
 function selectSection(id) {
-  // Forcer sauvegarde avant changement de section
-  if (state.saveTimer) {
-    clearTimeout(state.saveTimer);
-    state.saveTimer = null;
+  // Forcer sauvegarde si en cours d'édition
+  if (localState.saveTimer) {
+    clearTimeout(localState.saveTimer);
+    localState.saveTimer = null;
     if (state.activeSectionId) {
-      saveSectionContent(state.editor.getValue());
+      saveSectionContent(localState.editor.getValue());
     }
   }
 
   state.activeSectionId = id;
-  const section = state.manifeste.data.sections.find((s) => s.id === id);
+  const section = activeSection();
   if (!section) return;
 
   el.activeSectionTitle.textContent = section.titre;
-  state.editor.setValue(section.contenu || "");
+  localState.editor.setValue(section.contenu || "");
 
-  // Refresh TOC active state
   $$(".toc-item").forEach((i) =>
     i.classList.toggle("active", i.dataset.id === id)
   );
+
+  // Propager aux modules feature
+  renderTaches();
+  renderProjets();
+  onAssistantSection();
+}
+
+// =========================================================================
+// MENU CONTEXTUEL SECTION (clic droit)
+// =========================================================================
+function openSectionMenu(e, section) {
+  // Simple prompt-based menu pour rester vanilla sans popup custom
+  const choice = prompt(
+    `Section « ${section.titre} »\n\n` +
+      `1 = Statut stable\n2 = Statut en travail\n3 = Statut à revoir\n` +
+      `4 = ${section.archive ? "Désarchiver" : "Archiver"}\n` +
+      `5 = Monter\n6 = Descendre\n\nTon choix :`
+  );
+  if (!choice) return;
+  handleSectionMenu(choice.trim(), section);
+}
+
+async function handleSectionMenu(choice, section) {
+  const statutMap = { 1: "stable", 2: "en_travail", 3: "a_revoir" };
+  if (statutMap[choice]) {
+    section.statut = statutMap[choice];
+    section.updated_at = now();
+    renderTOC();
+    await saveDataFile("manifeste", `Statut ${section.id} → ${section.statut}`);
+  } else if (choice === "4") {
+    section.archive = !section.archive;
+    section.updated_at = now();
+    renderTOC();
+    await saveDataFile(
+      "manifeste",
+      section.archive ? `Archive ${section.id}` : `Restore ${section.id}`
+    );
+  } else if (choice === "5" || choice === "6") {
+    // Échanger ordre avec le sibling adjacent
+    const siblings = state.manifeste.data.sections
+      .filter((s) => s.parent_id === section.parent_id)
+      .sort((a, b) => a.ordre - b.ordre);
+    const idx = siblings.findIndex((s) => s.id === section.id);
+    const swapIdx = choice === "5" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= siblings.length) return;
+    const other = siblings[swapIdx];
+    [section.ordre, other.ordre] = [other.ordre, section.ordre];
+    section.updated_at = other.updated_at = now();
+    renderTOC();
+    await saveDataFile("manifeste", `Réordonnancement ${section.id}`);
+  }
 }
 
 // =========================================================================
 // UI BINDINGS
 // =========================================================================
 function bindUI() {
-  // Recherche
   el.tocSearch.addEventListener("input", (e) => {
-    state.tocSearch = e.target.value;
+    localState.tocSearch = e.target.value;
     renderTOC();
   });
 
-  // Filtres
   $$(".filter-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       $$(".filter-btn").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
-      state.tocFilter = btn.dataset.filter;
+      localState.tocFilter = btn.dataset.filter;
       renderTOC();
     });
   });
 
-  // Tabs
   $$(".tab-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       const tab = btn.dataset.tab;
@@ -330,7 +372,6 @@ function bindUI() {
     });
   });
 
-  // Mobile nav
   $$(".mobile-nav-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       const col = btn.dataset.col;
@@ -341,32 +382,26 @@ function bindUI() {
       });
     });
   });
-  // Initial : colonne centrale sur mobile
   if (window.innerWidth <= 768) {
     $(".col-center").classList.add("mobile-active");
     $$(".mobile-nav-btn").forEach((b) => b.classList.remove("active"));
     $('.mobile-nav-btn[data-col="center"]').classList.add("active");
   }
 
-  // Settings
   el.btnSettings.addEventListener("click", () => {
     showConfig();
   });
-
-  // Preview only toggle
   el.btnPreviewOnly.addEventListener("click", () => {
     el.editorSplit.classList.toggle("preview-only");
   });
-
-  // Bouton ajout section
   $("#btn-add-section").addEventListener("click", addSection);
 
-  // Keyboard: Cmd+S pour sauvegarde manuelle
+  // Cmd+S sauvegarde manuelle
   document.addEventListener("keydown", (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "s") {
       e.preventDefault();
-      if (state.saveTimer) clearTimeout(state.saveTimer);
-      if (state.activeSectionId) saveSectionContent(state.editor.getValue());
+      if (localState.saveTimer) clearTimeout(localState.saveTimer);
+      if (state.activeSectionId) saveSectionContent(localState.editor.getValue());
     }
   });
 }
@@ -383,20 +418,16 @@ async function addSection() {
     alert("Niveau invalide.");
     return;
   }
-  // Parent : dernière section de niveau < current
   let parent_id = null;
   if (niveau > 1) {
     const candidates = state.manifeste.data.sections.filter(
       (s) => s.niveau < niveau && !s.archive
     );
-    const parentTitle = prompt(
-      "ID de la section parente (voir TOC) :",
-      candidates.length ? candidates[candidates.length - 1].id : ""
-    );
-    parent_id = parentTitle || null;
+    const def = candidates.length ? candidates[candidates.length - 1].id : "";
+    const pid = prompt("ID de la section parente (voir TOC) :", def);
+    parent_id = pid || null;
   }
 
-  // ID unique
   const slug = titre
     .toLowerCase()
     .normalize("NFD")
@@ -418,9 +449,9 @@ async function addSection() {
   const ordre = siblings.length
     ? Math.max(...siblings.map((s) => s.ordre)) + 1
     : 1;
-  const now = new Date().toISOString();
 
-  const newSection = {
+  const n = now();
+  state.manifeste.data.sections.push({
     id,
     titre: titre.trim(),
     niveau,
@@ -430,13 +461,12 @@ async function addSection() {
     contenu: "",
     tags: [],
     archive: false,
-    created_at: now,
-    updated_at: now,
-  };
-  state.manifeste.data.sections.push(newSection);
+    created_at: n,
+    updated_at: n,
+  });
   renderTOC();
   selectSection(id);
-  await saveManifeste(`Add section ${id}`);
+  await saveDataFile("manifeste", `Add section ${id}`);
 }
 
 // =========================================================================
@@ -450,5 +480,4 @@ function setSaveStatus(kind, text) {
   el.saveIndicator.textContent = text;
 }
 
-// ---- Go
 boot();
