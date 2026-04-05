@@ -2,8 +2,8 @@
    app.js — Orchestration D4 Manifeste
    ========================================================================= */
 
-import * as gh from "./github.js?v=1775409136";
-import { createEditor } from "./editor.js?v=1775409136";
+import * as gh from "./github.js?v=1775409363";
+import { createEditor } from "./editor.js?v=1775409363";
 import {
   state,
   setStatusHandler,
@@ -11,15 +11,16 @@ import {
   activeSection,
   sortHierarchically,
   now,
-} from "./store.js?v=1775409136";
-import { initTaches, renderTaches } from "./taches.js?v=1775409136";
-import { initProjets, renderProjets } from "./projets.js?v=1775409136";
-import { initAssistant, onSectionChanged as onAssistantSection } from "./assistant.js?v=1775409136";
-import { initGenerer } from "./generer.js?v=1775409136";
-import { toast, confirmDialog, formDialog, actionMenu } from "./ui.js?v=1775409136";
-import { openPrintView } from "./print.js?v=1775409136";
+} from "./store.js?v=1775409363";
+import { initTaches, renderTaches } from "./taches.js?v=1775409363";
+import { initProjets, renderProjets } from "./projets.js?v=1775409363";
+import { initAssistant, onSectionChanged as onAssistantSection } from "./assistant.js?v=1775409363";
+import { initGenerer } from "./generer.js?v=1775409363";
+import { toast, confirmDialog, formDialog, actionMenu } from "./ui.js?v=1775409363";
+import { openPrintView } from "./print.js?v=1775409363";
 
 const CFG_KEY = "d4_manifeste_cfg_v1";
+const LAST_SECTION_KEY = "d4_manifeste_last_section";
 
 // ---- DOM refs
 const $ = (sel) => document.querySelector(sel);
@@ -169,10 +170,12 @@ async function startApp() {
   initGenerer();
   renderTOC();
 
-  // Sélection auto : première section non archivée (H1 de préférence)
+  // Restaurer la dernière section visitée ou tomber sur la première H1
+  const lastId = localStorage.getItem(LAST_SECTION_KEY);
   const sections = state.manifeste.data.sections.filter((s) => !s.archive);
-  const first = sections.find((s) => s.niveau === 1) || sections[0];
-  if (first) selectSection(first.id);
+  const restored = lastId && sections.find((s) => s.id === lastId);
+  const target = restored || sections.find((s) => s.niveau === 1) || sections[0];
+  if (target) selectSection(target.id);
 
   setSaveStatus("idle", "Prêt");
   bindUI();
@@ -310,6 +313,7 @@ function selectSection(id) {
   flushPendingSave();
 
   state.activeSectionId = id;
+  localStorage.setItem(LAST_SECTION_KEY, id);
   const section = activeSection();
   if (!section) return;
 
