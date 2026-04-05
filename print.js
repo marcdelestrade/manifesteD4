@@ -3,8 +3,8 @@
    Ouvre une nouvelle fenêtre avec le doc entier, prête à « Enregistrer en PDF ».
    ========================================================================= */
 
-import { state, sortHierarchically } from "./store.js?v=1775412535";
-import { toast } from "./ui.js?v=1775412535";
+import { state, sortHierarchically } from "./store.js?v=1775412550";
+import { toast } from "./ui.js?v=1775412550";
 
 /**
  * Point d'entrée : ouvre la fenêtre d'impression.
@@ -348,6 +348,21 @@ body { padding: 40px 0; }
   border-top: 1px solid #e0e0db;
   margin: 1.4em 0;
 }
+.sec-body table {
+  border-collapse: collapse;
+  margin: 1em 0;
+  font-size: 10pt;
+  width: auto;
+  max-width: 100%;
+}
+.sec-body th, .sec-body td {
+  border: 1px solid #c8c8c2;
+  padding: 5px 9px;
+  text-align: left;
+  vertical-align: top;
+}
+.sec-body th { background: #f5f5f2; font-weight: 600; color: #1a1a18; }
+.sec-body tr:nth-child(even) td { background: #fafaf7; }
 .sec-body a { color: #1D9E75; }
 
 /* ===== Barre d'action (écran uniquement) ===== */
