@@ -3,9 +3,9 @@
    Streaming Anthropic + injection de contexte + mémorisation de décisions.
    ========================================================================= */
 
-import { state, saveDataFile, activeSection, uid, now } from "./store.js?v=1775398391";
-import { streamMessage } from "./anthropic.js?v=1775398391";
-import { toast, promptDialog } from "./ui.js?v=1775398391";
+import { state, saveDataFile, activeSection, uid, now } from "./store.js?v=1775398599";
+import { streamMessage } from "./anthropic.js?v=1775398599";
+import { toast, promptDialog } from "./ui.js?v=1775398599";
 
 const SUGGESTIONS = [
   "Challenge ce contenu",

@@ -1363,18 +1363,20 @@ kbd {
   .mobile-nav-btn.nav-edge:active:not(:disabled) {
     background: var(--c-active);
   }
-  /* Éditeur : preview seul par défaut sur mobile */
+  /* Éditeur mobile : une seule colonne, texte OU rendu selon le mode */
   .editor-split {
     grid-template-columns: 1fr;
   }
   #editor-textarea {
-    display: none;
     border-right: none;
+    padding: 16px 20px;
   }
-  .editor-split.mobile-edit #editor-textarea {
-    display: block;
-  }
-  .editor-split.mobile-edit .editor-preview {
+  /* Mode Lecture : rendu HTML plein, textarea masqué (comportement normal) */
+  /* Mode Édition : textarea pleine largeur, preview masqué */
+  .editor-split:not(.read-mode) .editor-preview {
     display: none;
+  }
+  .editor-split:not(.read-mode) #editor-textarea {
+    display: block;
   }
 }
