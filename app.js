@@ -2,8 +2,8 @@
    app.js — Orchestration D4 Manifeste
    ========================================================================= */
 
-import * as gh from "./github.js?v=1775409363";
-import { createEditor } from "./editor.js?v=1775409363";
+import * as gh from "./github.js?v=1775412535";
+import { createEditor } from "./editor.js?v=1775412535";
 import {
   state,
   setStatusHandler,
@@ -11,13 +11,13 @@ import {
   activeSection,
   sortHierarchically,
   now,
-} from "./store.js?v=1775409363";
-import { initTaches, renderTaches } from "./taches.js?v=1775409363";
-import { initProjets, renderProjets } from "./projets.js?v=1775409363";
-import { initAssistant, onSectionChanged as onAssistantSection } from "./assistant.js?v=1775409363";
-import { initGenerer } from "./generer.js?v=1775409363";
-import { toast, confirmDialog, formDialog, actionMenu } from "./ui.js?v=1775409363";
-import { openPrintView } from "./print.js?v=1775409363";
+} from "./store.js?v=1775412535";
+import { initTaches, renderTaches } from "./taches.js?v=1775412535";
+import { initProjets, renderProjets } from "./projets.js?v=1775412535";
+import { initAssistant, onSectionChanged as onAssistantSection } from "./assistant.js?v=1775412535";
+import { initGenerer } from "./generer.js?v=1775412535";
+import { toast, confirmDialog, formDialog, actionMenu } from "./ui.js?v=1775412535";
+import { openPrintView } from "./print.js?v=1775412535";
 
 const CFG_KEY = "d4_manifeste_cfg_v1";
 const LAST_SECTION_KEY = "d4_manifeste_last_section";

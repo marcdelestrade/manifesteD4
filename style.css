@@ -675,6 +675,27 @@ a:hover {
 .markdown-body em {
   font-style: italic;
 }
+.markdown-body table {
+  border-collapse: collapse;
+  margin: 1em 0;
+  font-size: 13px;
+  width: auto;
+  max-width: 100%;
+}
+.markdown-body th,
+.markdown-body td {
+  border: 1px solid var(--c-border-strong);
+  padding: 6px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+.markdown-body th {
+  background: var(--c-hover);
+  font-weight: 600;
+}
+.markdown-body tr:nth-child(even) td {
+  background: var(--c-bg);
+}
 
 .placeholder {
   padding: 40px;
