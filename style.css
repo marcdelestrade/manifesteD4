@@ -1314,7 +1314,8 @@ kbd {
     top: 0;
     left: 0;
     right: 0;
-    bottom: var(--mobile-nav-h); /* réserve la place du footer fixé */
+    /* réserve la place du footer fixé + safe-area iPhone (home indicator) */
+    bottom: calc(var(--mobile-nav-h) + env(safe-area-inset-bottom, 0px));
     width: 100%;
     border: none;
     display: none;
@@ -1333,7 +1334,8 @@ kbd {
     bottom: 0;
     left: 0;
     right: 0;
-    height: var(--mobile-nav-h);
+    height: calc(var(--mobile-nav-h) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
     background: var(--c-surface);
     border-top: 1px solid var(--c-border);
     z-index: 100;
