@@ -2,9 +2,9 @@
    generer.js — Onglet Générer : contenu dérivé via Anthropic
    ========================================================================= */
 
-import { state, activeSection } from "./store.js?v=1775399811";
-import { streamMessage } from "./anthropic.js?v=1775399811";
-import { toast } from "./ui.js?v=1775399811";
+import { state, activeSection } from "./store.js?v=1775399826";
+import { streamMessage } from "./anthropic.js?v=1775399826";
+import { toast } from "./ui.js?v=1775399826";
 
 const PROMPTS = {
   guide: (s, p) =>
