@@ -970,6 +970,189 @@ a:hover {
   flex-shrink: 0;
 }
 
+/* =========================================================================
+   TOASTS
+   ========================================================================= */
+.toast-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 8px;
+  pointer-events: none;
+  max-width: 380px;
+}
+.toast {
+  background: var(--c-text);
+  color: white;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.2s, transform 0.2s;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.toast.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.toast-success { background: var(--c-stable); }
+.toast-error { background: var(--c-a-revoir); }
+.toast-warn { background: var(--c-en-travail); }
+.toast-info { background: var(--c-text); }
+
+/* =========================================================================
+   MODALS
+   ========================================================================= */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1500;
+  padding: 20px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.modal-backdrop.visible {
+  display: flex;
+  opacity: 1;
+}
+.modal {
+  background: var(--c-surface);
+  border-radius: 10px;
+  box-shadow: var(--shadow-md);
+  max-width: 440px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  animation: modalIn 0.15s ease-out;
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(-10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.modal-title {
+  padding: 16px 20px 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.modal-body {
+  padding: 8px 20px 16px;
+  font-size: 13px;
+  color: var(--c-text);
+  line-height: 1.5;
+}
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--c-border);
+  background: var(--c-bg);
+  border-radius: 0 0 10px 10px;
+}
+
+.form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.form-field label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--c-text);
+}
+.form-field input,
+.form-field textarea,
+.form-field select {
+  padding: 7px 10px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface);
+  font-size: 13px;
+  font-family: inherit;
+}
+.form-field input:focus,
+.form-field textarea:focus,
+.form-field select:focus {
+  outline: none;
+  border-color: var(--c-accent);
+  box-shadow: 0 0 0 3px rgba(29, 158, 117, 0.15);
+}
+.form-field textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+/* Menu d'actions */
+.modal-menu .modal-title {
+  padding-bottom: 4px;
+}
+.action-menu {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 8px 12px;
+}
+.action-item {
+  text-align: left;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--c-text);
+}
+.action-item:hover {
+  background: var(--c-hover);
+}
+.action-item.danger {
+  color: var(--c-a-revoir);
+}
+.action-item.danger:hover {
+  background: rgba(226, 75, 74, 0.08);
+}
+
+/* =========================================================================
+   AIDE RACCOURCIS
+   ========================================================================= */
+.shortcut-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+.shortcut-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+}
+kbd {
+  display: inline-block;
+  padding: 2px 6px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border-strong);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--c-text);
+  margin: 0 1px;
+}
+
 /* ========== Navigation mobile ========== */
 .mobile-nav {
   display: none;

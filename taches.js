@@ -3,6 +3,7 @@
    ========================================================================= */
 
 import { state, saveDataFile, uid, now } from "./store.js";
+import { toast, confirmDialog } from "./ui.js";
 
 const STATUTS = ["a_faire", "en_cours", "termine", "bloque"];
 const STATUT_LABELS = {
@@ -133,11 +134,21 @@ async function cyclePriorite(t) {
 }
 
 async function archiveTache(t) {
-  if (!confirm(`Archiver la tâche « ${t.label} » ?`)) return;
+  const ok = await confirmDialog(`Archiver la tâche « ${t.label} » ?`, {
+    title: "Archiver la tâche",
+    okLabel: "Archiver",
+    danger: true,
+  });
+  if (!ok) return;
   t.archive = true;
   t.updated_at = now();
   renderTaches();
-  await saveDataFile("taches", `Archive tache ${t.id}`);
+  try {
+    await saveDataFile("taches", `Archive tache ${t.id}`);
+    toast("Tâche archivée", "success");
+  } catch (err) {
+    toast(err.message, "error");
+  }
 }
 
 async function editLabel(t, labelEl) {

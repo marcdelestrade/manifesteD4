@@ -5,6 +5,7 @@
 
 import { state, saveDataFile, activeSection, uid, now } from "./store.js";
 import { streamMessage } from "./anthropic.js";
+import { toast, promptDialog } from "./ui.js";
 
 const SUGGESTIONS = [
   "Challenge ce contenu",
@@ -112,26 +113,28 @@ function renderMessage(m, idx) {
 async function memoriser(texte) {
   const section = activeSection();
   if (!section) return;
-  const decision = prompt(
-    "Formule la décision à mémoriser (modifiable) :",
-    texte.slice(0, 200)
-  );
+  const decision = await promptDialog("Formule la décision à mémoriser :", {
+    title: "Mémoriser une décision",
+    defaultValue: texte.slice(0, 280),
+    multiline: true,
+    okLabel: "Mémoriser",
+  });
   if (!decision) return;
 
   state.memoire.data.decisions = state.memoire.data.decisions || [];
   state.memoire.data.decisions.push({
     id: uid("d"),
     section_id: section.id,
-    decision: decision.trim(),
+    decision,
     date: now().slice(0, 10),
   });
   state.memoire.data.updated_at = now();
 
   try {
     await saveDataFile("memoire", `Memo decision pour ${section.id}`);
-    alert("Décision mémorisée ✓");
+    toast("Décision mémorisée ✓", "success");
   } catch (err) {
-    alert(`Erreur : ${err.message}`);
+    toast(err.message, "error");
   }
 }
 
@@ -143,7 +146,7 @@ async function onSend() {
   const text = el.input.value.trim();
   if (!text) return;
   if (!state.cfg.anthropicKey) {
-    alert("Clé API Anthropic manquante. Configure-la via ⚙.");
+    toast("Clé API Anthropic manquante. Configure-la via ⚙.", "warn");
     return;
   }
 

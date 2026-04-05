@@ -16,6 +16,7 @@ import { initTaches, renderTaches } from "./taches.js";
 import { initProjets, renderProjets } from "./projets.js";
 import { initAssistant, onSectionChanged as onAssistantSection } from "./assistant.js";
 import { initGenerer } from "./generer.js";
+import { toast, confirmDialog, formDialog, actionMenu } from "./ui.js";
 
 const CFG_KEY = "d4_manifeste_cfg_v1";
 
@@ -134,7 +135,7 @@ async function startApp() {
     state.memoire = data.memoire;
   } catch (err) {
     setSaveStatus("error", "Erreur chargement");
-    alert(`Impossible de charger les données : ${err.message}`);
+    toast(`Impossible de charger les données : ${err.message}`, "error", 8000);
     return;
   }
 
@@ -191,7 +192,7 @@ async function saveSectionContent(value) {
     await saveDataFile("manifeste", `Update section ${section.id}`);
   } catch (err) {
     console.error(err);
-    alert(`Erreur sauvegarde : ${err.message}\n\nRecharger la page pour synchroniser.`);
+    toast(`Erreur sauvegarde : ${err.message}`, "error", 6000);
   }
 }
 
@@ -301,46 +302,65 @@ function selectSection(id) {
 // =========================================================================
 // MENU CONTEXTUEL SECTION (clic droit)
 // =========================================================================
-function openSectionMenu(e, section) {
-  // Simple prompt-based menu pour rester vanilla sans popup custom
-  const choice = prompt(
-    `Section « ${section.titre} »\n\n` +
-      `1 = Statut stable\n2 = Statut en travail\n3 = Statut à revoir\n` +
-      `4 = ${section.archive ? "Désarchiver" : "Archiver"}\n` +
-      `5 = Monter\n6 = Descendre\n\nTon choix :`
-  );
+async function openSectionMenu(e, section) {
+  const choice = await actionMenu({
+    title: section.titre,
+    actions: [
+      { label: "● Statut : stable", value: "stable" },
+      { label: "● Statut : en travail", value: "en_travail" },
+      { label: "● Statut : à revoir", value: "a_revoir" },
+      {
+        label: section.archive ? "↺ Désarchiver" : "🗄 Archiver",
+        value: "archive",
+      },
+      { label: "↑ Monter", value: "up" },
+      { label: "↓ Descendre", value: "down" },
+    ],
+  });
   if (!choice) return;
-  handleSectionMenu(choice.trim(), section);
-}
 
-async function handleSectionMenu(choice, section) {
-  const statutMap = { 1: "stable", 2: "en_travail", 3: "a_revoir" };
-  if (statutMap[choice]) {
-    section.statut = statutMap[choice];
+  if (["stable", "en_travail", "a_revoir"].includes(choice)) {
+    section.statut = choice;
     section.updated_at = now();
     renderTOC();
-    await saveDataFile("manifeste", `Statut ${section.id} → ${section.statut}`);
-  } else if (choice === "4") {
+    try {
+      await saveDataFile("manifeste", `Statut ${section.id} → ${choice}`);
+      toast(`Statut mis à jour`, "success");
+    } catch (err) {
+      toast(err.message, "error");
+    }
+  } else if (choice === "archive") {
     section.archive = !section.archive;
     section.updated_at = now();
     renderTOC();
-    await saveDataFile(
-      "manifeste",
-      section.archive ? `Archive ${section.id}` : `Restore ${section.id}`
-    );
-  } else if (choice === "5" || choice === "6") {
-    // Échanger ordre avec le sibling adjacent
+    try {
+      await saveDataFile(
+        "manifeste",
+        section.archive ? `Archive ${section.id}` : `Restore ${section.id}`
+      );
+      toast(section.archive ? "Section archivée" : "Section restaurée", "success");
+    } catch (err) {
+      toast(err.message, "error");
+    }
+  } else if (choice === "up" || choice === "down") {
     const siblings = state.manifeste.data.sections
       .filter((s) => s.parent_id === section.parent_id)
       .sort((a, b) => a.ordre - b.ordre);
     const idx = siblings.findIndex((s) => s.id === section.id);
-    const swapIdx = choice === "5" ? idx - 1 : idx + 1;
-    if (swapIdx < 0 || swapIdx >= siblings.length) return;
+    const swapIdx = choice === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= siblings.length) {
+      toast("Déjà à l'extrémité", "warn", 1500);
+      return;
+    }
     const other = siblings[swapIdx];
     [section.ordre, other.ordre] = [other.ordre, section.ordre];
     section.updated_at = other.updated_at = now();
     renderTOC();
-    await saveDataFile("manifeste", `Réordonnancement ${section.id}`);
+    try {
+      await saveDataFile("manifeste", `Réordonnancement ${section.id}`);
+    } catch (err) {
+      toast(err.message, "error");
+    }
   }
 }
 
@@ -391,18 +411,115 @@ function bindUI() {
   el.btnSettings.addEventListener("click", () => {
     showConfig();
   });
+  $("#btn-help").addEventListener("click", showShortcuts);
   el.btnPreviewOnly.addEventListener("click", () => {
     el.editorSplit.classList.toggle("preview-only");
   });
   $("#btn-add-section").addEventListener("click", addSection);
 
-  // Cmd+S sauvegarde manuelle
-  document.addEventListener("keydown", (e) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === "s") {
-      e.preventDefault();
-      if (localState.saveTimer) clearTimeout(localState.saveTimer);
-      if (state.activeSectionId) saveSectionContent(localState.editor.getValue());
+  // Raccourcis clavier globaux
+  document.addEventListener("keydown", handleShortcuts);
+}
+
+function handleShortcuts(e) {
+  const mod = e.metaKey || e.ctrlKey;
+  const target = e.target;
+  const isInput =
+    target.tagName === "INPUT" ||
+    target.tagName === "TEXTAREA" ||
+    target.tagName === "SELECT";
+
+  // Cmd+S : sauvegarde manuelle
+  if (mod && e.key === "s") {
+    e.preventDefault();
+    if (localState.saveTimer) clearTimeout(localState.saveTimer);
+    if (state.activeSectionId) {
+      saveSectionContent(localState.editor.getValue());
+      toast("Sauvegarde…", "info", 1500);
     }
+    return;
+  }
+
+  // Cmd+K : focus recherche
+  if (mod && e.key === "k") {
+    e.preventDefault();
+    el.tocSearch.focus();
+    el.tocSearch.select();
+    return;
+  }
+
+  // Cmd+/ ou ? : aide raccourcis
+  if ((mod && e.key === "/") || (!isInput && e.key === "?")) {
+    e.preventDefault();
+    showShortcuts();
+    return;
+  }
+
+  // Cmd+1-4 : switch tabs
+  if (mod && ["1", "2", "3", "4"].includes(e.key)) {
+    e.preventDefault();
+    const tabs = ["manifeste", "taches", "projets", "generer"];
+    const tab = tabs[parseInt(e.key, 10) - 1];
+    $(`.tab-btn[data-tab="${tab}"]`)?.click();
+    return;
+  }
+
+  // Cmd+Enter dans l'éditeur : basculer preview-only
+  if (mod && e.key === "Enter" && target === el.editorTextarea) {
+    e.preventDefault();
+    el.editorSplit.classList.toggle("preview-only");
+    return;
+  }
+
+  // j/k : navigation dans la TOC (hors input)
+  if (!isInput && !mod && (e.key === "j" || e.key === "k")) {
+    e.preventDefault();
+    navigateTOC(e.key === "j" ? 1 : -1);
+    return;
+  }
+}
+
+function navigateTOC(direction) {
+  const items = $$(".toc-item");
+  const idx = items.findIndex((i) => i.dataset.id === state.activeSectionId);
+  const next = items[Math.max(0, Math.min(items.length - 1, idx + direction))];
+  if (next) {
+    selectSection(next.dataset.id);
+    next.scrollIntoView({ block: "nearest" });
+  }
+}
+
+function showShortcuts() {
+  const body = document.createElement("div");
+  body.className = "shortcut-list";
+  const rows = [
+    ["Sauvegarder", "⌘ S"],
+    ["Rechercher dans la TOC", "⌘ K"],
+    ["Section précédente / suivante", "K / J"],
+    ["Onglet Manifeste / Tâches / Projets / Générer", "⌘ 1-4"],
+    ["Basculer rendu seul (dans l'éditeur)", "⌘ Entrée"],
+    ["Envoyer à l'assistant IA", "⌘ Entrée"],
+    ["Fermer modal / menu", "Échap"],
+    ["Aide raccourcis", "⌘ / ou ?"],
+  ];
+  for (const [label, key] of rows) {
+    const r = document.createElement("div");
+    r.className = "shortcut-row";
+    const l = document.createElement("span");
+    l.textContent = label;
+    const k = document.createElement("span");
+    k.innerHTML = key
+      .split(" ")
+      .map((p) => `<kbd>${p}</kbd>`)
+      .join(" ");
+    r.appendChild(l);
+    r.appendChild(k);
+    body.appendChild(r);
+  }
+  confirmDialog(body, {
+    title: "Raccourcis clavier",
+    okLabel: "OK",
+    cancelLabel: "",
   });
 }
 
@@ -410,25 +527,49 @@ function bindUI() {
 // AJOUT DE SECTION
 // =========================================================================
 async function addSection() {
-  const titre = prompt("Titre de la nouvelle section :");
-  if (!titre) return;
-  const niveauStr = prompt("Niveau (1, 2 ou 3) :", "2");
-  const niveau = parseInt(niveauStr, 10);
-  if (![1, 2, 3].includes(niveau)) {
-    alert("Niveau invalide.");
-    return;
-  }
-  let parent_id = null;
-  if (niveau > 1) {
-    const candidates = state.manifeste.data.sections.filter(
-      (s) => s.niveau < niveau && !s.archive
-    );
-    const def = candidates.length ? candidates[candidates.length - 1].id : "";
-    const pid = prompt("ID de la section parente (voir TOC) :", def);
-    parent_id = pid || null;
+  // Construire la liste des parents candidats
+  const parentOptions = [{ value: "", label: "(racine / pas de parent)" }];
+  for (const s of sortHierarchically([...state.manifeste.data.sections])) {
+    if (s.archive || s.niveau >= 3) continue;
+    const indent = "  ".repeat(s.niveau - 1);
+    parentOptions.push({
+      value: s.id,
+      label: `${indent}H${s.niveau} — ${s.titre}`,
+    });
   }
 
-  const slug = titre
+  const result = await formDialog({
+    title: "Nouvelle section",
+    fields: [
+      { name: "titre", label: "Titre", type: "text", placeholder: "Ex. Nos engagements clients" },
+      {
+        name: "niveau",
+        label: "Niveau",
+        type: "select",
+        value: "2",
+        options: [
+          { value: "1", label: "H1 — titre de partie" },
+          { value: "2", label: "H2 — section" },
+          { value: "3", label: "H3 — sous-section" },
+        ],
+      },
+      {
+        name: "parent_id",
+        label: "Parent (si H2 ou H3)",
+        type: "select",
+        value: "",
+        options: parentOptions,
+      },
+    ],
+    okLabel: "Créer",
+  });
+  if (!result || !result.titre) return;
+
+  const niveau = parseInt(result.niveau, 10);
+  let parent_id = result.parent_id || null;
+  if (niveau === 1) parent_id = null;
+
+  const slug = result.titre
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -443,17 +584,12 @@ async function addSection() {
     id = `${id}-${i}`;
   }
 
-  const siblings = state.manifeste.data.sections.filter(
-    (s) => s.parent_id === parent_id
-  );
-  const ordre = siblings.length
-    ? Math.max(...siblings.map((s) => s.ordre)) + 1
-    : 1;
-
+  const siblings = state.manifeste.data.sections.filter((s) => s.parent_id === parent_id);
+  const ordre = siblings.length ? Math.max(...siblings.map((s) => s.ordre)) + 1 : 1;
   const n = now();
   state.manifeste.data.sections.push({
     id,
-    titre: titre.trim(),
+    titre: result.titre,
     niveau,
     parent_id,
     ordre,
@@ -466,7 +602,12 @@ async function addSection() {
   });
   renderTOC();
   selectSection(id);
-  await saveDataFile("manifeste", `Add section ${id}`);
+  try {
+    await saveDataFile("manifeste", `Add section ${id}`);
+    toast(`Section créée : ${result.titre}`, "success");
+  } catch (err) {
+    toast(err.message, "error");
+  }
 }
 
 // =========================================================================

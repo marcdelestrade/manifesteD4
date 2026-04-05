@@ -4,6 +4,7 @@
 
 import { state, activeSection } from "./store.js";
 import { streamMessage } from "./anthropic.js";
+import { toast } from "./ui.js";
 
 const PROMPTS = {
   guide: (s, p) =>
@@ -45,11 +46,11 @@ async function onGenerate() {
   if (isGenerating) return;
   const section = activeSection();
   if (!section) {
-    alert("Sélectionne d'abord une section.");
+    toast("Sélectionne d'abord une section.", "warn");
     return;
   }
   if (!state.cfg.anthropicKey) {
-    alert("Clé API Anthropic manquante.");
+    toast("Clé API Anthropic manquante.", "warn");
     return;
   }
 

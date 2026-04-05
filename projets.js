@@ -3,6 +3,7 @@
    ========================================================================= */
 
 import { state, saveDataFile, uid, now } from "./store.js";
+import { toast, confirmDialog, formDialog } from "./ui.js";
 
 const STATUTS = ["a_specifier", "en_cours", "en_pause", "termine"];
 const STATUT_LABELS = {
@@ -93,23 +94,42 @@ function renderProjet(p) {
 }
 
 async function addProjet() {
-  const nom = prompt("Nom du projet :");
-  if (!nom || !nom.trim()) return;
-  const description = prompt("Description (optionnelle) :", "") || "";
+  const result = await formDialog({
+    title: "Nouveau projet",
+    fields: [
+      { name: "nom", label: "Nom du projet", type: "text", placeholder: "Ex. Scoring fournisseurs IA" },
+      {
+        name: "description",
+        label: "Description (optionnelle)",
+        type: "text",
+        multiline: true,
+        rows: 3,
+        placeholder: "À quoi sert ce projet ? Objectif, livrable attendu…",
+      },
+      { name: "lien_vision", label: "Lien Vision / externe (optionnel)", type: "text", placeholder: "https://…" },
+    ],
+    okLabel: "Créer",
+  });
+  if (!result || !result.nom) return;
   const p = {
     id: uid("p"),
     section_id: state.activeSectionId,
-    nom: nom.trim(),
-    description: description.trim(),
+    nom: result.nom,
+    description: result.description || "",
     statut: "a_specifier",
-    lien_vision: "",
+    lien_vision: result.lien_vision || "",
     archive: false,
     created_at: now(),
     updated_at: now(),
   };
   state.projets.data.projets.push(p);
   renderProjets();
-  await saveDataFile("projets", `Add projet ${p.id}`);
+  try {
+    await saveDataFile("projets", `Add projet ${p.id}`);
+    toast(`Projet créé : ${p.nom}`, "success");
+  } catch (err) {
+    toast(err.message, "error");
+  }
 }
 
 async function cycleStatut(p) {
@@ -121,11 +141,21 @@ async function cycleStatut(p) {
 }
 
 async function archiveProjet(p) {
-  if (!confirm(`Archiver le projet « ${p.nom} » ?`)) return;
+  const ok = await confirmDialog(`Archiver le projet « ${p.nom} » ?`, {
+    title: "Archiver le projet",
+    okLabel: "Archiver",
+    danger: true,
+  });
+  if (!ok) return;
   p.archive = true;
   p.updated_at = now();
   renderProjets();
-  await saveDataFile("projets", `Archive projet ${p.id}`);
+  try {
+    await saveDataFile("projets", `Archive projet ${p.id}`);
+    toast("Projet archivé", "success");
+  } catch (err) {
+    toast(err.message, "error");
+  }
 }
 
 function editNom(p, titleEl) {
