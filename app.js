@@ -2,8 +2,8 @@
    app.js — Orchestration D4 Manifeste
    ========================================================================= */
 
-import * as gh from "./github.js";
-import { createEditor } from "./editor.js";
+import * as gh from "./github.js?v=1775398045";
+import { createEditor } from "./editor.js?v=1775398045";
 import {
   state,
   setStatusHandler,
@@ -11,13 +11,13 @@ import {
   saveDataFile,
   activeSection,
   now,
-} from "./store.js";
-import { initTaches, renderTaches } from "./taches.js";
-import { initProjets, renderProjets } from "./projets.js";
-import { initAssistant, onSectionChanged as onAssistantSection } from "./assistant.js";
-import { initGenerer } from "./generer.js";
-import { toast, confirmDialog, formDialog, actionMenu } from "./ui.js";
-import { openPrintView } from "./print.js";
+} from "./store.js?v=1775398045";
+import { initTaches, renderTaches } from "./taches.js?v=1775398045";
+import { initProjets, renderProjets } from "./projets.js?v=1775398045";
+import { initAssistant, onSectionChanged as onAssistantSection } from "./assistant.js?v=1775398045";
+import { initGenerer } from "./generer.js?v=1775398045";
+import { toast, confirmDialog, formDialog, actionMenu } from "./ui.js?v=1775398045";
+import { openPrintView } from "./print.js?v=1775398045";
 
 const CFG_KEY = "d4_manifeste_cfg_v1";
 

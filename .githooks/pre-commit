@@ -1,0 +1,23 @@
+#!/bin/sh
+# =============================================================================
+# Cache-busting automatique
+# Met à jour ?v=N dans toutes les refs d'assets à chaque commit.
+# Le timestamp est basé sur l'heure actuelle → URL unique → Safari/Chrome
+# sont obligés de re-fetcher les fichiers.
+# =============================================================================
+
+STAMP=$(date +%s)
+
+# Remplacer ?v=<N> dans index.html et tous les .js
+for f in index.html *.js; do
+  if [ -f "$f" ]; then
+    # sed -i.bak pour compatibilité macOS/Linux
+    sed -i.bak -E "s|(\?v=)[0-9]+|\1${STAMP}|g" "$f"
+    rm -f "$f.bak"
+  fi
+done
+
+# Re-stager les fichiers modifiés (seulement ceux déjà trackés)
+git add -u index.html *.js 2>/dev/null || true
+
+exit 0
