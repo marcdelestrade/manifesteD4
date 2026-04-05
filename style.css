@@ -560,6 +560,44 @@ a:hover {
   background: var(--c-bg);
 }
 
+/* En-tête de section affichée en haut du preview (mode lecture) */
+.section-preview-header {
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--c-border);
+}
+.preview-section-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--c-text);
+  line-height: 1.25;
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+.section-preview-header.n1 .preview-section-title {
+  font-size: 28px;
+  color: var(--c-accent-dark);
+}
+.section-preview-header.n2 .preview-section-title {
+  font-size: 22px;
+}
+.section-preview-header.n3 .preview-section-title {
+  font-size: 18px;
+  color: var(--c-text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.preview-empty-hint {
+  margin-top: 12px;
+  padding: 14px 16px;
+  background: var(--c-bg);
+  border: 1px dashed var(--c-border-strong);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--c-text-soft);
+  font-style: italic;
+}
+
 /* Rendu markdown */
 .markdown-body {
   font-size: 14px;

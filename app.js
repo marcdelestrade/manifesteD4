@@ -2,8 +2,8 @@
    app.js — Orchestration D4 Manifeste
    ========================================================================= */
 
-import * as gh from "./github.js?v=1775401146";
-import { createEditor } from "./editor.js?v=1775401146";
+import * as gh from "./github.js?v=1775408177";
+import { createEditor } from "./editor.js?v=1775408177";
 import {
   state,
   setStatusHandler,
@@ -11,19 +11,25 @@ import {
   activeSection,
   sortHierarchically,
   now,
-} from "./store.js?v=1775401146";
-import { initTaches, renderTaches } from "./taches.js?v=1775401146";
-import { initProjets, renderProjets } from "./projets.js?v=1775401146";
-import { initAssistant, onSectionChanged as onAssistantSection } from "./assistant.js?v=1775401146";
-import { initGenerer } from "./generer.js?v=1775401146";
-import { toast, confirmDialog, formDialog, actionMenu } from "./ui.js?v=1775401146";
-import { openPrintView } from "./print.js?v=1775401146";
+} from "./store.js?v=1775408177";
+import { initTaches, renderTaches } from "./taches.js?v=1775408177";
+import { initProjets, renderProjets } from "./projets.js?v=1775408177";
+import { initAssistant, onSectionChanged as onAssistantSection } from "./assistant.js?v=1775408177";
+import { initGenerer } from "./generer.js?v=1775408177";
+import { toast, confirmDialog, formDialog, actionMenu } from "./ui.js?v=1775408177";
+import { openPrintView } from "./print.js?v=1775408177";
 
 const CFG_KEY = "d4_manifeste_cfg_v1";
 
 // ---- DOM refs
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
+const escapeHtml = (s) =>
+  String(s || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 
 const el = {
   configScreen: $("#config-screen"),
@@ -181,6 +187,15 @@ function initEditor() {
     preview: el.editorPreview,
     toolbar: el.editorToolbar,
     onChange: onEditorChange,
+    getHeader: () => {
+      const s = activeSection();
+      if (!s) return "";
+      const isEmpty = !(s.contenu || "").trim();
+      const hint = isEmpty
+        ? '<p class="preview-empty-hint">Cette section est vide. Clique sur ✏️ Modifier pour écrire.</p>'
+        : "";
+      return `<header class="section-preview-header n${s.niveau}"><h1 class="preview-section-title">${escapeHtml(s.titre)}</h1>${hint}</header>`;
+    },
   });
 }
 

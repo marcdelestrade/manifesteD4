@@ -6,19 +6,24 @@
 /**
  * Initialise l'éditeur. Renvoie un contrôleur avec setValue / getValue / onChange.
  */
-export function createEditor({ textarea, preview, toolbar, onChange }) {
+export function createEditor({ textarea, preview, toolbar, onChange, getHeader }) {
+  const renderNow = () => {
+    const headerHtml = getHeader ? getHeader() : "";
+    preview.innerHTML = headerHtml + window.marked.parse(textarea.value || "", { breaks: true });
+  };
+
   // RAF-coalesce : plafonne le rendu à ~60fps même en frappe rapide
   let rafPending = null;
   const scheduleRender = () => {
     if (rafPending !== null) return;
     rafPending = requestAnimationFrame(() => {
       rafPending = null;
-      preview.innerHTML = window.marked.parse(textarea.value || "", { breaks: true });
+      renderNow();
     });
   };
 
   // Rendu initial immédiat (pas de flash)
-  preview.innerHTML = window.marked.parse(textarea.value || "", { breaks: true });
+  renderNow();
 
   textarea.addEventListener("input", () => {
     scheduleRender();
@@ -95,8 +100,7 @@ export function createEditor({ textarea, preview, toolbar, onChange }) {
   return {
     setValue(v) {
       textarea.value = v || "";
-      // setValue est synchrone (changement de section) — rendu immédiat
-      preview.innerHTML = window.marked.parse(textarea.value || "", { breaks: true });
+      renderNow();
     },
     getValue() {
       return textarea.value;
