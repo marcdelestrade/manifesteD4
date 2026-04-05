@@ -454,7 +454,8 @@ function bindUI() {
   $$(".mobile-nav-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       const col = btn.dataset.col;
-      $$(".mobile-nav-btn").forEach((b) => b.classList.remove("active"));
+      if (!col) return; // Boutons nav-edge (prev/next) : handler séparé
+      $$(".mobile-nav-btn[data-col]").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       ["left", "center", "right"].forEach((c) => {
         $(`.col-${c}`).classList.toggle("mobile-active", c === col);
