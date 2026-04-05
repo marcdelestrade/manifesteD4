@@ -91,17 +91,21 @@
           <!-- Onglet Manifeste -->
           <section class="tab-panel active" id="tab-manifeste">
             <div class="editor-toolbar">
-              <button class="editor-btn" data-md="bold" title="Gras"><strong>B</strong></button>
-              <button class="editor-btn" data-md="italic" title="Italique"><em>I</em></button>
-              <button class="editor-btn" data-md="h2" title="Titre H2">H2</button>
-              <button class="editor-btn" data-md="h3" title="Titre H3">H3</button>
-              <button class="editor-btn" data-md="list" title="Liste">•</button>
-              <button class="editor-btn" data-md="quote" title="Citation">"</button>
-              <button class="editor-btn" data-md="hr" title="Séparateur">―</button>
+              <div class="toolbar-md-buttons">
+                <button class="editor-btn" data-md="bold" title="Gras (⌘B)"><strong>B</strong></button>
+                <button class="editor-btn" data-md="italic" title="Italique (⌘I)"><em>I</em></button>
+                <button class="editor-btn" data-md="h2" title="Titre H2">H2</button>
+                <button class="editor-btn" data-md="h3" title="Titre H3">H3</button>
+                <button class="editor-btn" data-md="list" title="Liste">•</button>
+                <button class="editor-btn" data-md="quote" title="Citation">"</button>
+                <button class="editor-btn" data-md="hr" title="Séparateur">―</button>
+              </div>
               <div class="toolbar-spacer"></div>
-              <button class="editor-btn" id="btn-preview-only" title="Affichage rendu uniquement">👁</button>
+              <button class="btn-toggle-mode" id="btn-toggle-mode" title="Basculer lecture / édition">
+                <span class="icon">✏️</span><span class="label">Modifier</span>
+              </button>
             </div>
-            <div class="editor-split" id="editor-split">
+            <div class="editor-split read-mode" id="editor-split">
               <textarea id="editor-textarea" spellcheck="true" placeholder="Contenu markdown…"></textarea>
               <div id="editor-preview" class="editor-preview markdown-body"></div>
             </div>

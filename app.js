@@ -38,8 +38,9 @@ const el = {
   editorPreview: $("#editor-preview"),
   editorToolbar: $(".editor-toolbar"),
   btnSettings: $("#btn-settings"),
-  btnPreviewOnly: $("#btn-preview-only"),
+  btnToggleMode: $("#btn-toggle-mode"),
   editorSplit: $("#editor-split"),
+  editorToolbarEl: $(".editor-toolbar"),
   countTaches: $("#count-taches"),
   countProjets: $("#count-projets"),
 };
@@ -289,6 +290,9 @@ function selectSection(id) {
   el.activeSectionTitle.textContent = section.titre;
   localState.editor.setValue(section.contenu || "");
 
+  // Toujours revenir en mode lecture quand on change de section
+  toggleEditMode("read");
+
   $$(".toc-item").forEach((i) =>
     i.classList.toggle("active", i.dataset.id === id)
   );
@@ -412,10 +416,11 @@ function bindUI() {
     showConfig();
   });
   $("#btn-help").addEventListener("click", showShortcuts);
-  el.btnPreviewOnly.addEventListener("click", () => {
-    el.editorSplit.classList.toggle("preview-only");
-  });
+  el.btnToggleMode.addEventListener("click", toggleEditMode);
   $("#btn-add-section").addEventListener("click", addSection);
+
+  // Toolbar reflète le mode initial (lecture)
+  el.editorToolbarEl.classList.add("read");
 
   // Raccourcis clavier globaux
   document.addEventListener("keydown", handleShortcuts);
@@ -464,10 +469,10 @@ function handleShortcuts(e) {
     return;
   }
 
-  // Cmd+Enter dans l'éditeur : basculer preview-only
-  if (mod && e.key === "Enter" && target === el.editorTextarea) {
+  // Cmd+E : basculer lecture / édition
+  if (mod && e.key === "e") {
     e.preventDefault();
-    el.editorSplit.classList.toggle("preview-only");
+    toggleEditMode();
     return;
   }
 
@@ -489,6 +494,35 @@ function navigateTOC(direction) {
   }
 }
 
+function toggleEditMode(forceMode) {
+  const currentlyRead = el.editorSplit.classList.contains("read-mode");
+  const goToEdit = forceMode === "edit" ? true : forceMode === "read" ? false : currentlyRead;
+  if (goToEdit) {
+    // Lecture → Édition
+    el.editorSplit.classList.remove("read-mode");
+    el.editorToolbarEl.classList.remove("read");
+    el.btnToggleMode.innerHTML = '<span class="icon">📖</span><span class="label">Lecture</span>';
+    setTimeout(() => {
+      el.editorTextarea.focus();
+      // Placer le curseur à la fin
+      const len = el.editorTextarea.value.length;
+      el.editorTextarea.setSelectionRange(len, len);
+    }, 50);
+  } else {
+    // Édition → Lecture : flush sauvegarde en cours
+    if (localState.saveTimer) {
+      clearTimeout(localState.saveTimer);
+      localState.saveTimer = null;
+      if (state.activeSectionId) {
+        saveSectionContent(localState.editor.getValue());
+      }
+    }
+    el.editorSplit.classList.add("read-mode");
+    el.editorToolbarEl.classList.add("read");
+    el.btnToggleMode.innerHTML = '<span class="icon">✏️</span><span class="label">Modifier</span>';
+  }
+}
+
 function showShortcuts() {
   const body = document.createElement("div");
   body.className = "shortcut-list";
@@ -497,7 +531,7 @@ function showShortcuts() {
     ["Rechercher dans la TOC", "⌘ K"],
     ["Section précédente / suivante", "K / J"],
     ["Onglet Manifeste / Tâches / Projets / Générer", "⌘ 1-4"],
-    ["Basculer rendu seul (dans l'éditeur)", "⌘ Entrée"],
+    ["Basculer Lecture / Édition", "⌘ E"],
     ["Envoyer à l'assistant IA", "⌘ Entrée"],
     ["Fermer modal / menu", "Échap"],
     ["Aide raccourcis", "⌘ / ou ?"],
@@ -602,6 +636,8 @@ async function addSection() {
   });
   renderTOC();
   selectSection(id);
+  // Nouvelle section = vide, bascule direct en édition
+  toggleEditMode("edit");
   try {
     await saveDataFile("manifeste", `Add section ${id}`);
     toast(`Section créée : ${result.titre}`, "success");
