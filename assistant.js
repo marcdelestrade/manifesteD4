@@ -3,12 +3,11 @@
    Streaming Anthropic + injection de contexte + mémorisation de décisions.
    ========================================================================= */
 
-import { state, saveDataFile, activeSection, uid, now } from "./store.js?v=1775408941";
-import { streamMessage } from "./anthropic.js?v=1775408941";
-import { toast, promptDialog, confirmDialog } from "./ui.js?v=1775408941";
+import { state, saveDataFile, activeSection, uid, now } from "./store.js?v=1775409136";
+import { streamMessage } from "./anthropic.js?v=1775409136";
+import { toast, promptDialog, confirmDialog } from "./ui.js?v=1775409136";
 
 const MAX_MESSAGES = 20; // 10 échanges max par section (cap des coûts tokens)
-const PERSIST_DEBOUNCE_MS = 3000;
 
 const SUGGESTIONS = [
   "Challenge ce contenu",
@@ -20,7 +19,6 @@ const SUGGESTIONS = [
 let el = {};
 let isStreaming = false;
 let rafPending = null;
-let persistTimer = null;
 
 export function initAssistant() {
   el = {
@@ -371,29 +369,29 @@ async function onSend() {
     });
     assistantMsg.streaming = false;
     replaceLastMessage(assistantMsg);
+    trimAndPersist(); // sauvegarde immédiate côté GitHub
   } catch (err) {
     assistantMsg.content = `Erreur : ${err.message}`;
     assistantMsg.streaming = false;
     replaceLastMessage(assistantMsg);
+    // Ne pas persister une conversation qui s'est terminée en erreur
+    state.aiMessages = state.aiMessages.filter((m) => m !== assistantMsg);
   } finally {
     isStreaming = false;
     el.send.disabled = false;
-    trimAndSchedulePersist();
     renderPersistenceHeader();
   }
 }
 
-/** Tronque à MAX_MESSAGES + planifie la sauvegarde GitHub (debounce). */
-function trimAndSchedulePersist() {
+/** Tronque à MAX_MESSAGES + sauvegarde immédiate sur GitHub. */
+function trimAndPersist() {
   if (state.aiMessages.length > MAX_MESSAGES) {
     state.aiMessages = state.aiMessages.slice(-MAX_MESSAGES);
   }
-  if (persistTimer) clearTimeout(persistTimer);
-  persistTimer = setTimeout(persistConversation, PERSIST_DEBOUNCE_MS);
+  persistConversation();
 }
 
 async function persistConversation() {
-  persistTimer = null;
   const sectionId = state.activeSectionId;
   if (!sectionId || !state.conversations) return;
   const data = state.conversations.data;
@@ -417,8 +415,6 @@ async function persistConversation() {
 async function clearConversation() {
   state.aiMessages = [];
   renderMessages();
-  // Purger aussi côté GitHub
-  if (persistTimer) clearTimeout(persistTimer);
   const sectionId = state.activeSectionId;
   if (!sectionId || !state.conversations) return;
   const data = state.conversations.data;
