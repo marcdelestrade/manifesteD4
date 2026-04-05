@@ -3,20 +3,20 @@
    Streaming Anthropic + injection de contexte + mémorisation de décisions.
    ========================================================================= */
 
-import { state, saveDataFile, activeSection, uid, now } from "./store.js?v=1775398599";
-import { streamMessage } from "./anthropic.js?v=1775398599";
-import { toast, promptDialog } from "./ui.js?v=1775398599";
+import { state, saveDataFile, activeSection, uid, now } from "./store.js?v=1775399137";
+import { streamMessage } from "./anthropic.js?v=1775399137";
+import { toast, promptDialog } from "./ui.js?v=1775399137";
 
 const SUGGESTIONS = [
   "Challenge ce contenu",
-  "Quelles décisions ont été prises ici ?",
+  "Quelles tâches devrais-je programmer sur cette partie ?",
   "Qu'est-ce qui manque ?",
   "Génère une FAQ à partir de ça",
-  "Est-ce aligné avec l'ambition D4 ?",
 ];
 
 let el = {};
 let isStreaming = false;
+let rafPending = null;
 
 export function initAssistant() {
   el = {
@@ -64,26 +64,45 @@ function renderSuggestions() {
   }
 }
 
+function renderIntro() {
+  const intro = document.createElement("div");
+  intro.className = "ai-intro";
+  const section = activeSection();
+  intro.textContent = section
+    ? `Assistant contextuel — connecté à « ${section.titre} »`
+    : "Sélectionne une section pour démarrer";
+  return intro;
+}
+
 function renderMessages() {
   el.messages.innerHTML = "";
   if (state.aiMessages.length === 0) {
-    const intro = document.createElement("div");
-    intro.className = "ai-intro";
-    const section = activeSection();
-    intro.textContent = section
-      ? `Assistant contextuel — connecté à « ${section.titre} »`
-      : "Sélectionne une section pour démarrer";
-    el.messages.appendChild(intro);
+    el.messages.appendChild(renderIntro());
     return;
   }
-  for (let i = 0; i < state.aiMessages.length; i++) {
-    const m = state.aiMessages[i];
-    el.messages.appendChild(renderMessage(m, i));
+  for (const m of state.aiMessages) {
+    el.messages.appendChild(renderMessage(m));
   }
   el.messages.scrollTop = el.messages.scrollHeight;
 }
 
-function renderMessage(m, idx) {
+/** Ajoute un nouveau message sans rebuild de la liste entière. */
+function appendMessage(m) {
+  // Retirer l'intro s'il existe
+  el.messages.querySelector(".ai-intro")?.remove();
+  el.messages.appendChild(renderMessage(m));
+  el.messages.scrollTop = el.messages.scrollHeight;
+}
+
+/** Remplace la dernière bulle par un nouveau rendu final (bouton mémoriser inclus). */
+function replaceLastMessage(m) {
+  const all = el.messages.querySelectorAll(".ai-msg");
+  const last = all[all.length - 1];
+  if (last) last.replaceWith(renderMessage(m));
+  el.messages.scrollTop = el.messages.scrollHeight;
+}
+
+function renderMessage(m) {
   const wrap = document.createElement("div");
   wrap.className = `ai-msg ai-msg-${m.role}`;
 
@@ -121,6 +140,7 @@ async function memoriser(texte) {
   });
   if (!decision) return;
 
+  if (!state.memoire.data) state.memoire.data = { decisions: [] };
   state.memoire.data.decisions = state.memoire.data.decisions || [];
   state.memoire.data.decisions.push({
     id: uid("d"),
@@ -151,10 +171,12 @@ async function onSend() {
   }
 
   el.input.value = "";
-  state.aiMessages.push({ role: "user", content: text });
+  const userMsg = { role: "user", content: text };
+  state.aiMessages.push(userMsg);
+  appendMessage(userMsg);
   const assistantMsg = { role: "assistant", content: "", streaming: true };
   state.aiMessages.push(assistantMsg);
-  renderMessages();
+  appendMessage(assistantMsg);
 
   isStreaming = true;
   el.send.disabled = true;
@@ -173,34 +195,38 @@ async function onSend() {
       maxTokens: 2048,
       onDelta: (_delta, full) => {
         assistantMsg.content = full;
-        // Re-render live seulement la dernière bulle pour éviter flicker
-        updateLastBubble(full);
+        scheduleBubbleUpdate(full);
       },
     });
     assistantMsg.streaming = false;
-    renderMessages();
+    replaceLastMessage(assistantMsg);
   } catch (err) {
     assistantMsg.content = `Erreur : ${err.message}`;
     assistantMsg.streaming = false;
-    renderMessages();
+    replaceLastMessage(assistantMsg);
   } finally {
     isStreaming = false;
     el.send.disabled = false;
   }
 }
 
-function updateLastBubble(text) {
-  const bubbles = el.messages.querySelectorAll(".ai-msg-assistant .ai-bubble");
-  const last = bubbles[bubbles.length - 1];
-  if (last) {
-    last.innerHTML = window.marked.parse(text, { breaks: true });
-    el.messages.scrollTop = el.messages.scrollHeight;
-  }
+/** Met à jour la dernière bulle, coalescée en RAF (cap ~60Hz). */
+function scheduleBubbleUpdate(text) {
+  if (rafPending !== null) return;
+  rafPending = requestAnimationFrame(() => {
+    rafPending = null;
+    const bubbles = el.messages.querySelectorAll(".ai-msg-assistant .ai-bubble");
+    const last = bubbles[bubbles.length - 1];
+    if (last) {
+      last.innerHTML = window.marked.parse(text, { breaks: true });
+      el.messages.scrollTop = el.messages.scrollHeight;
+    }
+  });
 }
 
 function buildSystemPrompt() {
   const section = activeSection();
-  const m = state.memoire.data;
+  const m = state.memoire?.data || {};
 
   const decisionsSection = (m.decisions || [])
     .filter((d) => d.section_id === section?.id)
@@ -220,7 +246,7 @@ function buildSystemPrompt() {
   return `Tu es l'assistant stratégique de Marc Delestrade, fondateur de D4 Immobilier.
 
 CONTEXTE D4 :
-${m.contexte_general}
+${m.contexte_general || "(contexte non renseigné)"}
 
 PRINCIPES DE TRAVAIL AVEC MARC :
 ${(m.principes_travail || []).map((p) => `- ${p}`).join("\n")}

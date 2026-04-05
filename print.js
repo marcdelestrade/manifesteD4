@@ -3,8 +3,8 @@
    Ouvre une nouvelle fenêtre avec le doc entier, prête à « Enregistrer en PDF ».
    ========================================================================= */
 
-import { state } from "./store.js?v=1775398599";
-import { toast } from "./ui.js?v=1775398599";
+import { state, sortHierarchically } from "./store.js?v=1775399137";
+import { toast } from "./ui.js?v=1775399137";
 
 /**
  * Point d'entrée : ouvre la fenêtre d'impression.
@@ -34,7 +34,7 @@ export function openPrintView() {
  */
 function buildPrintHTML() {
   // Tri hiérarchique des sections (non archivées)
-  const sections = sortHierarchical(
+  const sections = sortHierarchically(
     state.manifeste.data.sections.filter((s) => !s.archive)
   );
 
@@ -129,25 +129,6 @@ ${content}
 // =========================================================================
 // HELPERS
 // =========================================================================
-function sortHierarchical(sections) {
-  const byParent = {};
-  for (const s of sections) {
-    const key = s.parent_id || "__root__";
-    (byParent[key] ||= []).push(s);
-  }
-  for (const k in byParent) byParent[k].sort((a, b) => a.ordre - b.ordre);
-  const result = [];
-  const walk = (pid) => {
-    const children = byParent[pid || "__root__"] || [];
-    for (const c of children) {
-      result.push(c);
-      walk(c.id);
-    }
-  };
-  walk(null);
-  return result;
-}
-
 function extractFirstQuote(md) {
   if (!md) return "";
   // Chercher une ligne blockquote > "..."

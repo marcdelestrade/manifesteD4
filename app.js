@@ -2,22 +2,22 @@
    app.js — Orchestration D4 Manifeste
    ========================================================================= */
 
-import * as gh from "./github.js?v=1775398599";
-import { createEditor } from "./editor.js?v=1775398599";
+import * as gh from "./github.js?v=1775399137";
+import { createEditor } from "./editor.js?v=1775399137";
 import {
   state,
   setStatusHandler,
-  emitStatus,
   saveDataFile,
   activeSection,
+  sortHierarchically,
   now,
-} from "./store.js?v=1775398599";
-import { initTaches, renderTaches } from "./taches.js?v=1775398599";
-import { initProjets, renderProjets } from "./projets.js?v=1775398599";
-import { initAssistant, onSectionChanged as onAssistantSection } from "./assistant.js?v=1775398599";
-import { initGenerer } from "./generer.js?v=1775398599";
-import { toast, confirmDialog, formDialog, actionMenu } from "./ui.js?v=1775398599";
-import { openPrintView } from "./print.js?v=1775398599";
+} from "./store.js?v=1775399137";
+import { initTaches, renderTaches } from "./taches.js?v=1775399137";
+import { initProjets, renderProjets } from "./projets.js?v=1775399137";
+import { initAssistant, onSectionChanged as onAssistantSection } from "./assistant.js?v=1775399137";
+import { initGenerer } from "./generer.js?v=1775399137";
+import { toast, confirmDialog, formDialog, actionMenu } from "./ui.js?v=1775399137";
+import { openPrintView } from "./print.js?v=1775399137";
 
 const CFG_KEY = "d4_manifeste_cfg_v1";
 
@@ -41,7 +41,6 @@ const el = {
   btnSettings: $("#btn-settings"),
   btnToggleMode: $("#btn-toggle-mode"),
   editorSplit: $("#editor-split"),
-  editorToolbarEl: $(".editor-toolbar"),
   btnPrev: $("#btn-prev"),
   btnNext: $("#btn-next"),
   prevTitle: $("#prev-title"),
@@ -58,7 +57,12 @@ let localState = {
   tocSearch: "",
   editor: null,
   saveTimer: null,
+  searchTimer: null,
+  sortedSections: null, // Cache du tri hiérarchique, invalidé sur add/archive/reorder
 };
+
+const SAVE_DEBOUNCE_MS = 2000;
+const SEARCH_DEBOUNCE_MS = 150;
 
 // =========================================================================
 // BOOT
@@ -183,7 +187,17 @@ function onEditorChange(value) {
   if (!state.activeSectionId) return;
   if (localState.saveTimer) clearTimeout(localState.saveTimer);
   setSaveStatus("dirty", "Non sauvé");
-  localState.saveTimer = setTimeout(() => saveSectionContent(value), 2000);
+  localState.saveTimer = setTimeout(() => saveSectionContent(value), SAVE_DEBOUNCE_MS);
+}
+
+/** Force la sauvegarde en attente immédiatement (sur changement de section, ⌘S, toggle mode). */
+function flushPendingSave() {
+  if (!localState.saveTimer) return;
+  clearTimeout(localState.saveTimer);
+  localState.saveTimer = null;
+  if (state.activeSectionId) {
+    saveSectionContent(localState.editor.getValue());
+  }
 }
 
 async function saveSectionContent(value) {
@@ -207,15 +221,50 @@ async function saveSectionContent(value) {
 // =========================================================================
 // TOC
 // =========================================================================
-function renderTOC() {
-  const sections = getFilteredSections();
-  el.tocList.innerHTML = "";
 
-  for (const s of sections) {
+/** Cache du tri hiérarchique. Invalidé quand les sections sont ajoutées/archivées/réordonnées. */
+function getSortedSections() {
+  if (!localState.sortedSections) {
+    localState.sortedSections = sortHierarchically(state.manifeste.data.sections);
+  }
+  return localState.sortedSections;
+}
+function invalidateSortedCache() {
+  localState.sortedSections = null;
+}
+
+/** Construit un Map section_id → nombre de tâches ouvertes, en un seul pass sur les tâches. */
+function buildOpenTachesMap() {
+  const map = new Map();
+  for (const t of state.taches.data.taches) {
+    if (t.archive || t.statut === "termine") continue;
+    map.set(t.section_id, (map.get(t.section_id) || 0) + 1);
+  }
+  return map;
+}
+
+function renderTOC() {
+  let list = getSortedSections();
+  if (localState.tocFilter === "actives") list = list.filter((s) => !s.archive);
+  if (localState.tocSearch) {
+    const q = localState.tocSearch.toLowerCase();
+    list = list.filter(
+      (s) =>
+        s.titre.toLowerCase().includes(q) ||
+        (s.contenu || "").toLowerCase().includes(q)
+    );
+  }
+
+  const openTaches = buildOpenTachesMap();
+  const activeId = state.activeSectionId;
+
+  // Construction via DocumentFragment pour minimiser les reflows
+  const frag = document.createDocumentFragment();
+  for (const s of list) {
     const item = document.createElement("div");
     item.className = `toc-item n${s.niveau}`;
     if (s.archive) item.classList.add("archived");
-    if (s.id === state.activeSectionId) item.classList.add("active");
+    if (s.id === activeId) item.classList.add("active");
     item.dataset.id = s.id;
 
     const dot = document.createElement("span");
@@ -228,67 +277,21 @@ function renderTOC() {
     title.textContent = s.titre;
     item.appendChild(title);
 
-    const tachesCount = state.taches.data.taches.filter(
-      (t) => t.section_id === s.id && !t.archive && t.statut !== "termine"
-    ).length;
-    if (tachesCount > 0) {
+    const count = openTaches.get(s.id) || 0;
+    if (count > 0) {
       const badge = document.createElement("span");
       badge.className = "toc-badge";
-      badge.textContent = tachesCount;
+      badge.textContent = count;
       item.appendChild(badge);
     }
-
-    item.addEventListener("click", () => selectSection(s.id));
-    item.addEventListener("contextmenu", (e) => {
-      e.preventDefault();
-      openSectionMenu(e, s);
-    });
-    el.tocList.appendChild(item);
+    frag.appendChild(item);
   }
-}
-
-function getFilteredSections() {
-  let list = sortHierarchically([...state.manifeste.data.sections]);
-  if (localState.tocFilter === "actives") list = list.filter((s) => !s.archive);
-  if (localState.tocSearch) {
-    const q = localState.tocSearch.toLowerCase();
-    list = list.filter(
-      (s) =>
-        s.titre.toLowerCase().includes(q) ||
-        (s.contenu || "").toLowerCase().includes(q)
-    );
-  }
-  return list;
-}
-
-function sortHierarchically(sections) {
-  const byParent = {};
-  for (const s of sections) {
-    const key = s.parent_id || "__root__";
-    (byParent[key] ||= []).push(s);
-  }
-  for (const k in byParent) byParent[k].sort((a, b) => a.ordre - b.ordre);
-  const result = [];
-  const walk = (parentId) => {
-    const children = byParent[parentId || "__root__"] || [];
-    for (const child of children) {
-      result.push(child);
-      walk(child.id);
-    }
-  };
-  walk(null);
-  return result;
+  el.tocList.innerHTML = "";
+  el.tocList.appendChild(frag);
 }
 
 function selectSection(id) {
-  // Forcer sauvegarde si en cours d'édition
-  if (localState.saveTimer) {
-    clearTimeout(localState.saveTimer);
-    localState.saveTimer = null;
-    if (state.activeSectionId) {
-      saveSectionContent(localState.editor.getValue());
-    }
-  }
+  flushPendingSave();
 
   state.activeSectionId = id;
   const section = activeSection();
@@ -297,14 +300,13 @@ function selectSection(id) {
   el.activeSectionTitle.textContent = section.titre;
   localState.editor.setValue(section.contenu || "");
 
-  // Toujours revenir en mode lecture quand on change de section
   toggleEditMode("read");
 
-  $$(".toc-item").forEach((i) =>
-    i.classList.toggle("active", i.dataset.id === id)
-  );
+  // Màj visuelle TOC sans re-render complet
+  for (const i of el.tocList.querySelectorAll(".toc-item")) {
+    i.classList.toggle("active", i.dataset.id === id);
+  }
 
-  // Propager aux modules feature
   renderTaches();
   renderProjets();
   onAssistantSection();
@@ -315,10 +317,7 @@ function selectSection(id) {
 // NAVIGATION PREV / NEXT
 // =========================================================================
 function getNavList() {
-  // Liste des sections navigables (non archivées), ordre hiérarchique
-  return sortHierarchically([...state.manifeste.data.sections]).filter(
-    (s) => !s.archive
-  );
+  return getSortedSections().filter((s) => !s.archive);
 }
 
 function updateNavButtons() {
@@ -327,20 +326,12 @@ function updateNavButtons() {
   const prev = idx > 0 ? list[idx - 1] : null;
   const next = idx >= 0 && idx < list.length - 1 ? list[idx + 1] : null;
 
-  el.btnPrev.disabled = !prev;
-  el.btnNext.disabled = !next;
-  el.btnPrevMobile.disabled = !prev;
-  el.btnNextMobile.disabled = !next;
+  for (const b of [el.btnPrev, el.btnPrevMobile]) b.disabled = !prev;
+  for (const b of [el.btnNext, el.btnNextMobile]) b.disabled = !next;
   el.prevTitle.textContent = prev ? prev.titre : "—";
   el.nextTitle.textContent = next ? next.titre : "—";
-  el.btnPrev.dataset.targetId = prev?.id || "";
-  el.btnNext.dataset.targetId = next?.id || "";
-  el.btnPrev.title = prev
-    ? `Précédent : ${prev.titre} (←)`
-    : "Aucune section avant";
-  el.btnNext.title = next
-    ? `Suivant : ${next.titre} (→)`
-    : "Aucune section après";
+  el.btnPrev.title = prev ? `Précédent : ${prev.titre} (←)` : "Aucune section avant";
+  el.btnNext.title = next ? `Suivant : ${next.titre} (→)` : "Aucune section après";
 }
 
 function navigateRelative(delta) {
@@ -349,8 +340,7 @@ function navigateRelative(delta) {
   const target = list[idx + delta];
   if (target) {
     selectSection(target.id);
-    // Scroller la TOC pour garder la section active visible
-    document
+    el.tocList
       .querySelector(`.toc-item[data-id="${target.id}"]`)
       ?.scrollIntoView({ block: "nearest" });
   }
@@ -389,6 +379,7 @@ async function openSectionMenu(e, section) {
   } else if (choice === "archive") {
     section.archive = !section.archive;
     section.updated_at = now();
+    invalidateSortedCache();
     renderTOC();
     updateNavButtons();
     try {
@@ -413,6 +404,7 @@ async function openSectionMenu(e, section) {
     const other = siblings[swapIdx];
     [section.ordre, other.ordre] = [other.ordre, section.ordre];
     section.updated_at = other.updated_at = now();
+    invalidateSortedCache();
     renderTOC();
     updateNavButtons();
     try {
@@ -427,9 +419,27 @@ async function openSectionMenu(e, section) {
 // UI BINDINGS
 // =========================================================================
 function bindUI() {
+  // Recherche TOC debouncée
   el.tocSearch.addEventListener("input", (e) => {
-    localState.tocSearch = e.target.value;
-    renderTOC();
+    const v = e.target.value;
+    if (localState.searchTimer) clearTimeout(localState.searchTimer);
+    localState.searchTimer = setTimeout(() => {
+      localState.tocSearch = v;
+      renderTOC();
+    }, SEARCH_DEBOUNCE_MS);
+  });
+
+  // Event delegation : un seul listener sur la liste TOC
+  el.tocList.addEventListener("click", (e) => {
+    const item = e.target.closest(".toc-item");
+    if (item?.dataset.id) selectSection(item.dataset.id);
+  });
+  el.tocList.addEventListener("contextmenu", (e) => {
+    const item = e.target.closest(".toc-item");
+    if (!item?.dataset.id) return;
+    e.preventDefault();
+    const s = state.manifeste.data.sections.find((x) => x.id === item.dataset.id);
+    if (s) openSectionMenu(e, s);
   });
 
   $$(".filter-btn").forEach((btn) => {
@@ -482,7 +492,7 @@ function bindUI() {
   $("#btn-add-section").addEventListener("click", addSection);
 
   // Toolbar reflète le mode initial (lecture)
-  el.editorToolbarEl.classList.add("read");
+  el.editorToolbar.classList.add("read");
 
   // Raccourcis clavier globaux
   document.addEventListener("keydown", handleShortcuts);
@@ -499,11 +509,8 @@ function handleShortcuts(e) {
   // Cmd+S : sauvegarde manuelle
   if (mod && e.key === "s") {
     e.preventDefault();
-    if (localState.saveTimer) clearTimeout(localState.saveTimer);
-    if (state.activeSectionId) {
-      saveSectionContent(localState.editor.getValue());
-      toast("Sauvegarde…", "info", 1500);
-    }
+    flushPendingSave();
+    if (state.activeSectionId) toast("Sauvegarde…", "info", 1500);
     return;
   }
 
@@ -557,27 +564,18 @@ function toggleEditMode(forceMode) {
   const currentlyRead = el.editorSplit.classList.contains("read-mode");
   const goToEdit = forceMode === "edit" ? true : forceMode === "read" ? false : currentlyRead;
   if (goToEdit) {
-    // Lecture → Édition
     el.editorSplit.classList.remove("read-mode");
-    el.editorToolbarEl.classList.remove("read");
+    el.editorToolbar.classList.remove("read");
     el.btnToggleMode.innerHTML = '<span class="icon">📖</span><span class="label">Lecture</span>';
     setTimeout(() => {
       el.editorTextarea.focus();
-      // Placer le curseur à la fin
       const len = el.editorTextarea.value.length;
       el.editorTextarea.setSelectionRange(len, len);
     }, 50);
   } else {
-    // Édition → Lecture : flush sauvegarde en cours
-    if (localState.saveTimer) {
-      clearTimeout(localState.saveTimer);
-      localState.saveTimer = null;
-      if (state.activeSectionId) {
-        saveSectionContent(localState.editor.getValue());
-      }
-    }
+    flushPendingSave();
     el.editorSplit.classList.add("read-mode");
-    el.editorToolbarEl.classList.add("read");
+    el.editorToolbar.classList.add("read");
     el.btnToggleMode.innerHTML = '<span class="icon">✏️</span><span class="label">Modifier</span>';
   }
 }
@@ -693,9 +691,9 @@ async function addSection() {
     created_at: n,
     updated_at: n,
   });
+  invalidateSortedCache();
   renderTOC();
   selectSection(id);
-  // Nouvelle section = vide, bascule direct en édition
   toggleEditMode("edit");
   try {
     await saveDataFile("manifeste", `Add section ${id}`);

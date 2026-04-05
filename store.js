@@ -3,7 +3,7 @@
    Importé par tous les modules feature.
    ========================================================================= */
 
-import * as gh from "./github.js?v=1775398599";
+import * as gh from "./github.js?v=1775399137";
 
 export const state = {
   cfg: null, // { owner, repo, token, anthropicKey }
@@ -64,3 +64,26 @@ export function activeSection() {
 export const uid = (prefix) =>
   `${prefix}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 export const now = () => new Date().toISOString();
+
+/**
+ * Tri hiérarchique des sections : H1 → ses H2 → leurs H3 → H1 suivant…
+ * Basé sur parent_id + ordre. Renvoie un nouveau tableau aplati.
+ */
+export function sortHierarchically(sections) {
+  const byParent = {};
+  for (const s of sections) {
+    const key = s.parent_id || "__root__";
+    (byParent[key] ||= []).push(s);
+  }
+  for (const k in byParent) byParent[k].sort((a, b) => a.ordre - b.ordre);
+  const result = [];
+  const walk = (parentId) => {
+    const children = byParent[parentId || "__root__"] || [];
+    for (const child of children) {
+      result.push(child);
+      walk(child.id);
+    }
+  };
+  walk(null);
+  return result;
+}

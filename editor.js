@@ -7,18 +7,21 @@
  * Initialise l'éditeur. Renvoie un contrôleur avec setValue / getValue / onChange.
  */
 export function createEditor({ textarea, preview, toolbar, onChange }) {
-  const render = () => {
-    const md = textarea.value;
-    // marked est chargé via CDN dans index.html
-    preview.innerHTML = window.marked.parse(md || "", { breaks: true });
+  // RAF-coalesce : plafonne le rendu à ~60fps même en frappe rapide
+  let rafPending = null;
+  const scheduleRender = () => {
+    if (rafPending !== null) return;
+    rafPending = requestAnimationFrame(() => {
+      rafPending = null;
+      preview.innerHTML = window.marked.parse(textarea.value || "", { breaks: true });
+    });
   };
 
-  // Rendu initial
-  render();
+  // Rendu initial immédiat (pas de flash)
+  preview.innerHTML = window.marked.parse(textarea.value || "", { breaks: true });
 
-  // Saisie → rendu live + callback (debounce géré côté app)
   textarea.addEventListener("input", () => {
-    render();
+    scheduleRender();
     if (onChange) onChange(textarea.value);
   });
 
@@ -92,7 +95,8 @@ export function createEditor({ textarea, preview, toolbar, onChange }) {
   return {
     setValue(v) {
       textarea.value = v || "";
-      render();
+      // setValue est synchrone (changement de section) — rendu immédiat
+      preview.innerHTML = window.marked.parse(textarea.value || "", { breaks: true });
     },
     getValue() {
       return textarea.value;
