@@ -3,9 +3,9 @@
    Streaming Anthropic + injection de contexte + mémorisation de décisions.
    ========================================================================= */
 
-import { state, saveDataFile, activeSection, uid, now } from "./store.js?v=1775400456";
-import { streamMessage } from "./anthropic.js?v=1775400456";
-import { toast, promptDialog } from "./ui.js?v=1775400456";
+import { state, saveDataFile, activeSection, uid, now } from "./store.js?v=1775401146";
+import { streamMessage } from "./anthropic.js?v=1775401146";
+import { toast, promptDialog, confirmDialog } from "./ui.js?v=1775401146";
 
 const MAX_MESSAGES = 20; // 10 échanges max par section (cap des coûts tokens)
 const PERSIST_DEBOUNCE_MS = 3000;
@@ -141,18 +141,163 @@ function renderMessage(m) {
   }
   wrap.appendChild(bubble);
 
-  // Bouton "Mémoriser cette décision" sur les réponses de l'IA
+  // Boutons d'action sur les réponses de l'IA
   if (m.role === "assistant" && !m.streaming) {
     const actions = document.createElement("div");
     actions.className = "ai-msg-actions";
-    const btn = document.createElement("button");
-    btn.className = "ai-action-btn";
-    btn.textContent = "💾 Mémoriser cette décision";
-    btn.addEventListener("click", () => memoriser(m.content));
-    actions.appendChild(btn);
+
+    const btnMem = document.createElement("button");
+    btnMem.className = "ai-action-btn";
+    btnMem.textContent = "💾 Mémoriser la décision";
+    btnMem.addEventListener("click", () => memoriser(m.content));
+    actions.appendChild(btnMem);
+
+    const btnTasks = document.createElement("button");
+    btnTasks.className = "ai-action-btn";
+    btnTasks.textContent = "📋 Créer les tâches";
+    btnTasks.addEventListener("click", () => extractAndProposeTasks(m.content));
+    actions.appendChild(btnTasks);
+
     wrap.appendChild(actions);
   }
   return wrap;
+}
+
+// =========================================================================
+// EXTRACTION DE TÂCHES DEPUIS UNE RÉPONSE IA
+// =========================================================================
+async function extractAndProposeTasks(assistantText) {
+  const section = activeSection();
+  if (!section) return;
+  if (!state.cfg.anthropicKey) {
+    toast("Clé API Anthropic manquante.", "warn");
+    return;
+  }
+
+  const dismissLoading = toast("Extraction des tâches…", "info", 0);
+  let proposals;
+  try {
+    proposals = await extractTasks(assistantText);
+  } catch (err) {
+    dismissLoading();
+    toast(err.message, "error");
+    return;
+  }
+  dismissLoading();
+  if (!proposals.length) {
+    toast("Aucune tâche actionnable détectée", "warn");
+    return;
+  }
+
+  // Modale de sélection avec cases à cocher
+  const listEl = document.createElement("div");
+  listEl.className = "task-proposal-list";
+  const checkboxes = [];
+  proposals.forEach((p, i) => {
+    const row = document.createElement("label");
+    row.className = "task-proposal-row";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = true;
+    cb.dataset.idx = i;
+    const info = document.createElement("div");
+    info.className = "task-proposal-info";
+    const label = document.createElement("div");
+    label.className = "task-proposal-label";
+    label.textContent = p.label;
+    info.appendChild(label);
+    if (p.description) {
+      const desc = document.createElement("div");
+      desc.className = "task-proposal-desc";
+      desc.textContent = p.description;
+      info.appendChild(desc);
+    }
+    const prio = document.createElement("span");
+    prio.className = `prio-chip prio-${p.priorite || "normale"}`;
+    prio.textContent = p.priorite || "normale";
+    row.appendChild(cb);
+    row.appendChild(info);
+    row.appendChild(prio);
+    listEl.appendChild(row);
+    checkboxes.push(cb);
+  });
+
+  const ok = await confirmDialog(listEl, {
+    title: `${proposals.length} tâche${proposals.length > 1 ? "s" : ""} détectée${proposals.length > 1 ? "s" : ""}`,
+    okLabel: "Ajouter les sélectionnées",
+  });
+  if (!ok) return;
+
+  const selected = checkboxes
+    .filter((cb) => cb.checked)
+    .map((cb) => proposals[parseInt(cb.dataset.idx, 10)]);
+  if (selected.length === 0) return;
+
+  for (const p of selected) {
+    state.taches.data.taches.push({
+      id: uid("t"),
+      section_id: section.id,
+      label: p.label,
+      description: p.description || "",
+      statut: "a_faire",
+      priorite: p.priorite || "normale",
+      archive: false,
+      created_at: now(),
+      updated_at: now(),
+    });
+  }
+
+  try {
+    await saveDataFile("taches", `Add ${selected.length} tasks (IA) for ${section.id}`);
+    toast(
+      `${selected.length} tâche${selected.length > 1 ? "s" : ""} ajoutée${selected.length > 1 ? "s" : ""} ✓`,
+      "success"
+    );
+    document.dispatchEvent(new CustomEvent("taches-changed"));
+  } catch (err) {
+    toast(err.message, "error");
+  }
+}
+
+async function extractTasks(assistantText) {
+  const prompt = `Analyse le texte ci-dessous et extrais-en les tâches actionnables concrètes. Renvoie UNIQUEMENT un tableau JSON strict, sans texte avant ni après, sans balises markdown.
+
+Format attendu :
+[
+  {"label": "verbe à l'infinitif + objet court (max 80 chars)", "priorite": "haute|normale|basse", "description": "détail optionnel"}
+]
+
+Règles :
+- "label" : court, actionnable, commence par un verbe ("Définir…", "Créer…", "Valider…")
+- "priorite" : "haute" si urgence explicite dans le texte, sinon "normale"
+- "description" : uniquement si elle apporte du contexte utile au-delà du label
+- Ignore les réflexions, challenges, questions. Garde uniquement les actions concrètes à faire
+- Si aucune tâche claire : renvoie []
+
+Texte à analyser :
+---
+${assistantText}
+---
+
+JSON :`;
+
+  const full = await streamMessage({
+    apiKey: state.cfg.anthropicKey,
+    system: "Tu es un extracteur de tâches. Tu renvoies uniquement du JSON valide, rien d'autre.",
+    messages: [{ role: "user", content: prompt }],
+    maxTokens: 1024,
+    onDelta: () => {},
+  });
+
+  // Extraire le tableau JSON de la réponse
+  const match = full.match(/\[[\s\S]*\]/);
+  if (!match) return [];
+  try {
+    const arr = JSON.parse(match[0]);
+    return Array.isArray(arr) ? arr.filter((t) => t && t.label) : [];
+  } catch {
+    return [];
+  }
 }
 
 async function memoriser(texte) {

@@ -2,8 +2,8 @@
    app.js — Orchestration D4 Manifeste
    ========================================================================= */
 
-import * as gh from "./github.js?v=1775400456";
-import { createEditor } from "./editor.js?v=1775400456";
+import * as gh from "./github.js?v=1775401146";
+import { createEditor } from "./editor.js?v=1775401146";
 import {
   state,
   setStatusHandler,
@@ -11,13 +11,13 @@ import {
   activeSection,
   sortHierarchically,
   now,
-} from "./store.js?v=1775400456";
-import { initTaches, renderTaches } from "./taches.js?v=1775400456";
-import { initProjets, renderProjets } from "./projets.js?v=1775400456";
-import { initAssistant, onSectionChanged as onAssistantSection } from "./assistant.js?v=1775400456";
-import { initGenerer } from "./generer.js?v=1775400456";
-import { toast, confirmDialog, formDialog, actionMenu } from "./ui.js?v=1775400456";
-import { openPrintView } from "./print.js?v=1775400456";
+} from "./store.js?v=1775401146";
+import { initTaches, renderTaches } from "./taches.js?v=1775401146";
+import { initProjets, renderProjets } from "./projets.js?v=1775401146";
+import { initAssistant, onSectionChanged as onAssistantSection } from "./assistant.js?v=1775401146";
+import { initGenerer } from "./generer.js?v=1775401146";
+import { toast, confirmDialog, formDialog, actionMenu } from "./ui.js?v=1775401146";
+import { openPrintView } from "./print.js?v=1775401146";
 
 const CFG_KEY = "d4_manifeste_cfg_v1";
 
@@ -497,6 +497,12 @@ function bindUI() {
 
   // Raccourcis clavier globaux
   document.addEventListener("keydown", handleShortcuts);
+
+  // Mutations externes sur taches (depuis assistant IA) → refresh UI
+  document.addEventListener("taches-changed", () => {
+    renderTaches();
+    renderTOC();
+  });
 }
 
 function handleShortcuts(e) {
