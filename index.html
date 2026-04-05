@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>D4 Manifeste</title>
+    <link rel="stylesheet" href="style.css" />
+    <!-- Marked.js pour le rendu markdown (CDN, runtime) -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
+  </head>
+  <body>
+    <!-- Écran de configuration -->
+    <div id="config-screen" class="config-screen hidden">
+      <div class="config-box">
+        <h1>D4 Manifeste — Configuration</h1>
+        <p class="config-intro">
+          Premier lancement. Renseigne tes identifiants. Ils sont stockés
+          <strong>uniquement dans ton navigateur</strong> (localStorage), jamais envoyés vers un serveur tiers.
+        </p>
+        <form id="config-form">
+          <label>
+            GitHub Username
+            <input type="text" id="cfg-owner" value="marcdelestrade" required />
+          </label>
+          <label>
+            Repo données (privé)
+            <input type="text" id="cfg-repo" value="manifesteD4-data" required />
+          </label>
+          <label>
+            GitHub Personal Access Token (scope <code>repo</code>)
+            <input type="password" id="cfg-token" placeholder="ghp_..." required />
+          </label>
+          <label>
+            Clé API Anthropic
+            <input type="password" id="cfg-anthropic" placeholder="sk-ant-..." required />
+          </label>
+          <div class="config-actions">
+            <button type="submit" id="cfg-submit">Valider et lancer l'app</button>
+          </div>
+          <p id="cfg-status" class="config-status"></p>
+        </form>
+      </div>
+    </div>
+
+    <!-- Application principale -->
+    <div id="app" class="app hidden">
+      <!-- Header -->
+      <header class="app-header">
+        <div class="header-left">
+          <div class="logo">D4</div>
+          <h1 class="app-title">Manifeste</h1>
+        </div>
+        <div class="header-center">
+          <span id="active-section-title" class="active-section-title"></span>
+        </div>
+        <div class="header-right">
+          <span id="save-indicator" class="save-indicator">Prêt</span>
+          <button id="btn-settings" class="btn-icon" title="Configuration" aria-label="Configuration">⚙</button>
+        </div>
+      </header>
+
+      <!-- Corps 3 colonnes -->
+      <div class="app-body">
+        <!-- Colonne gauche : TOC -->
+        <aside class="col-left" id="col-left">
+          <div class="toc-header">
+            <input type="search" id="toc-search" placeholder="Rechercher…" />
+            <div class="toc-filters">
+              <button class="filter-btn active" data-filter="all">Toutes</button>
+              <button class="filter-btn" data-filter="actives">Actives</button>
+            </div>
+          </div>
+          <nav class="toc-list" id="toc-list" aria-label="Table des matières">
+            <!-- Généré par JS -->
+          </nav>
+          <div class="toc-footer">
+            <button id="btn-add-section" class="btn-add">＋ Ajouter une section</button>
+          </div>
+        </aside>
+
+        <!-- Colonne centrale : Espace de travail -->
+        <main class="col-center" id="col-center">
+          <div class="tabs">
+            <button class="tab-btn active" data-tab="manifeste">Manifeste</button>
+            <button class="tab-btn" data-tab="taches">Tâches <span class="tab-count" id="count-taches">0</span></button>
+            <button class="tab-btn" data-tab="projets">Projets <span class="tab-count" id="count-projets">0</span></button>
+            <button class="tab-btn" data-tab="generer">Générer</button>
+          </div>
+
+          <!-- Onglet Manifeste -->
+          <section class="tab-panel active" id="tab-manifeste">
+            <div class="editor-toolbar">
+              <button class="editor-btn" data-md="bold" title="Gras"><strong>B</strong></button>
+              <button class="editor-btn" data-md="italic" title="Italique"><em>I</em></button>
+              <button class="editor-btn" data-md="h2" title="Titre H2">H2</button>
+              <button class="editor-btn" data-md="h3" title="Titre H3">H3</button>
+              <button class="editor-btn" data-md="list" title="Liste">•</button>
+              <button class="editor-btn" data-md="quote" title="Citation">"</button>
+              <button class="editor-btn" data-md="hr" title="Séparateur">―</button>
+              <div class="toolbar-spacer"></div>
+              <button class="editor-btn" id="btn-preview-only" title="Affichage rendu uniquement">👁</button>
+            </div>
+            <div class="editor-split" id="editor-split">
+              <textarea id="editor-textarea" spellcheck="true" placeholder="Contenu markdown…"></textarea>
+              <div id="editor-preview" class="editor-preview markdown-body"></div>
+            </div>
+          </section>
+
+          <!-- Onglet Tâches (placeholder Phase 2) -->
+          <section class="tab-panel" id="tab-taches">
+            <div class="placeholder">Tâches — à venir (Phase 2)</div>
+          </section>
+
+          <!-- Onglet Projets (placeholder Phase 2) -->
+          <section class="tab-panel" id="tab-projets">
+            <div class="placeholder">Projets — à venir (Phase 2)</div>
+          </section>
+
+          <!-- Onglet Générer (placeholder Phase 2) -->
+          <section class="tab-panel" id="tab-generer">
+            <div class="placeholder">Générer du contenu dérivé — à venir (Phase 2)</div>
+          </section>
+        </main>
+
+        <!-- Colonne droite : Assistant IA (placeholder Phase 2) -->
+        <aside class="col-right" id="col-right">
+          <div class="ai-header">Assistant IA</div>
+          <div class="ai-placeholder">Assistant contextuel — à venir (Phase 2)</div>
+        </aside>
+      </div>
+
+      <!-- Navigation mobile -->
+      <nav class="mobile-nav" id="mobile-nav">
+        <button class="mobile-nav-btn active" data-col="left" aria-label="Table des matières">☰</button>
+        <button class="mobile-nav-btn" data-col="center" aria-label="Espace de travail">📄</button>
+        <button class="mobile-nav-btn" data-col="right" aria-label="Assistant IA">✦</button>
+      </nav>
+    </div>
+
+    <!-- Scripts (ES modules) -->
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
