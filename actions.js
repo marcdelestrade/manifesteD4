@@ -11,8 +11,8 @@ import {
   sortHierarchically,
   uid,
   now,
-} from "./store.js?v=1775499740";
-import { toast, confirmDialog } from "./ui.js?v=1775499740";
+} from "./store.js?v=1775500462";
+import { toast, confirmDialog } from "./ui.js?v=1775500462";
 
 const STATUT_ORDER = ["a_faire", "en_cours", "bloque", "termine"];
 const STATUT_LABELS = {
@@ -190,7 +190,7 @@ function renderTaskDetail(task) {
 
       <div class="task-detail-field">
         <label>Titre</label>
-        <input type="text" id="task-edit-label" value="${escapeAttr(task.label)}" />
+        <textarea id="task-edit-label" class="task-title-input" rows="1">${escapeHtml(task.label)}</textarea>
       </div>
 
       <div class="task-detail-row">
@@ -227,8 +227,17 @@ function renderTaskDetail(task) {
 
   // Bind events
   const qs = (sel) => el.detail.querySelector(sel);
-  qs("#task-edit-label").addEventListener("change", (e) => {
-    task.label = e.target.value.trim();
+
+  // Titre : textarea auto-grow
+  const titleEl = qs("#task-edit-label");
+  const autoGrow = () => {
+    titleEl.style.height = "auto";
+    titleEl.style.height = titleEl.scrollHeight + "px";
+  };
+  autoGrow(); // ajuster à l'ouverture
+  titleEl.addEventListener("input", autoGrow);
+  titleEl.addEventListener("change", () => {
+    task.label = titleEl.value.trim();
     task.updated_at = now();
     saveAndRefresh(task);
   });

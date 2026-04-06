@@ -3,9 +3,9 @@
    Streaming Anthropic + injection de contexte + mémorisation de décisions.
    ========================================================================= */
 
-import { state, saveDataFile, activeSection, uid, now } from "./store.js?v=1775499740";
-import { streamMessage } from "./anthropic.js?v=1775499740";
-import { toast, promptDialog, confirmDialog } from "./ui.js?v=1775499740";
+import { state, saveDataFile, activeSection, uid, now } from "./store.js?v=1775500462";
+import { streamMessage } from "./anthropic.js?v=1775500462";
+import { toast, promptDialog, confirmDialog } from "./ui.js?v=1775500462";
 
 const MAX_MESSAGES = 20; // 10 échanges max par section (cap des coûts tokens)
 
