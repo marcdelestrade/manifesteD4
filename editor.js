@@ -34,11 +34,15 @@ export function createEditor({ textarea, preview, toolbar, onChange, getHeader }
   const wrap = (prefix, suffix = prefix) => {
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
-    const selected = textarea.value.slice(start, end);
+    let selected = textarea.value.slice(start, end);
+    // Déplacer les espaces de début/fin HORS des marqueurs pour ne pas casser le markdown
+    const leadingWs = selected.match(/^(\s*)/)[1];
+    const trailingWs = selected.match(/(\s*)$/)[1];
+    selected = selected.slice(leadingWs.length, selected.length - trailingWs.length);
     const before = textarea.value.slice(0, start);
     const after = textarea.value.slice(end);
-    textarea.value = before + prefix + selected + suffix + after;
-    const cursor = start + prefix.length + selected.length;
+    textarea.value = before + leadingWs + prefix + selected + suffix + trailingWs + after;
+    const cursor = start + leadingWs.length + prefix.length + selected.length + suffix.length;
     textarea.focus();
     textarea.setSelectionRange(cursor, cursor);
     textarea.dispatchEvent(new Event("input"));

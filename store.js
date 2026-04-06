@@ -3,7 +3,7 @@
    Importé par tous les modules feature.
    ========================================================================= */
 
-import * as gh from "./github.js?v=1775413327";
+import * as gh from "./github.js?v=1775495410";
 
 export const state = {
   cfg: null, // { owner, repo, token, anthropicKey }

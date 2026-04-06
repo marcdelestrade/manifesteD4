@@ -2,8 +2,8 @@
    projets.js — CRUD des projets liés à la section active
    ========================================================================= */
 
-import { state, saveDataFile, uid, now } from "./store.js?v=1775413327";
-import { toast, confirmDialog, formDialog } from "./ui.js?v=1775413327";
+import { state, saveDataFile, uid, now } from "./store.js?v=1775495410";
+import { toast, confirmDialog, formDialog } from "./ui.js?v=1775495410";
 
 const STATUTS = ["a_specifier", "en_cours", "en_pause", "termine"];
 const STATUT_LABELS = {
