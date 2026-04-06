@@ -3,17 +3,24 @@
    Streaming Anthropic + injection de contexte + mémorisation de décisions.
    ========================================================================= */
 
-import { state, saveDataFile, activeSection, uid, now } from "./store.js?v=1775497534";
-import { streamMessage } from "./anthropic.js?v=1775497534";
-import { toast, promptDialog, confirmDialog } from "./ui.js?v=1775497534";
+import { state, saveDataFile, activeSection, uid, now } from "./store.js?v=1775497852";
+import { streamMessage } from "./anthropic.js?v=1775497852";
+import { toast, promptDialog, confirmDialog } from "./ui.js?v=1775497852";
 
 const MAX_MESSAGES = 20; // 10 échanges max par section (cap des coûts tokens)
 
-const SUGGESTIONS = [
+const SUGGESTIONS_MANIFESTE = [
   "Challenge ce contenu",
   "Quelles tâches devrais-je programmer sur cette partie ?",
   "Qu'est-ce qui manque ?",
   "Génère une FAQ à partir de ça",
+];
+
+const SUGGESTIONS_ACTIONS = [
+  "Qu'est-ce qui bloque ?",
+  "Décompose cette tâche en sous-étapes",
+  "Priorise les tâches de cette section",
+  "Comment avancer concrètement ?",
 ];
 
 let el = {};
@@ -53,9 +60,14 @@ export function onSectionChanged() {
   renderPersistenceHeader();
 }
 
+function getSuggestions() {
+  const mode = document.querySelector("#app")?.dataset.mode;
+  return mode === "actions" ? SUGGESTIONS_ACTIONS : SUGGESTIONS_MANIFESTE;
+}
+
 function renderSuggestions() {
   el.suggestions.innerHTML = "";
-  for (const text of SUGGESTIONS) {
+  for (const text of getSuggestions()) {
     const chip = document.createElement("button");
     chip.className = "ai-chip";
     chip.textContent = text;

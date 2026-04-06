@@ -11,8 +11,8 @@ import {
   sortHierarchically,
   uid,
   now,
-} from "./store.js?v=1775497534";
-import { toast, confirmDialog } from "./ui.js?v=1775497534";
+} from "./store.js?v=1775497852";
+import { toast, confirmDialog } from "./ui.js?v=1775497852";
 
 const STATUT_ORDER = ["a_faire", "en_cours", "bloque", "termine"];
 const STATUT_LABELS = {
@@ -117,14 +117,6 @@ export function renderTasksList() {
 
     for (const sid of orderedSids) {
       const sectionTasks = sectionMap.get(sid);
-      const section = sectionById.get(sid);
-      const breadcrumb = buildBreadcrumb(section, sectionById);
-
-      // Section label
-      const secHeader = document.createElement("div");
-      secHeader.className = "task-section-label";
-      secHeader.innerHTML = breadcrumb;
-      frag.appendChild(secHeader);
 
       for (const t of sectionTasks) {
         const item = document.createElement("div");
