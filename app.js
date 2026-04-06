@@ -2,8 +2,8 @@
    app.js — Orchestration D4 Manifeste
    ========================================================================= */
 
-import * as gh from "./github.js?v=1775499502";
-import { createEditor } from "./editor.js?v=1775499502";
+import * as gh from "./github.js?v=1775499740";
+import { createEditor } from "./editor.js?v=1775499740";
 import {
   state,
   setStatusHandler,
@@ -11,14 +11,14 @@ import {
   activeSection,
   sortHierarchically,
   now,
-} from "./store.js?v=1775499502";
-import { initTaches, renderTaches } from "./taches.js?v=1775499502";
-import { initAssistant, onSectionChanged as onAssistantSection } from "./assistant.js?v=1775499502";
-import { initGenerer } from "./generer.js?v=1775499502";
-import { initActions, renderTasksList, renderEmptyDetail } from "./actions.js?v=1775499502";
-import { toast, confirmDialog, formDialog, actionMenu } from "./ui.js?v=1775499502";
-import { openPrintView } from "./print.js?v=1775499502";
-import { openTasksView } from "./tasks-view.js?v=1775499502";
+} from "./store.js?v=1775499740";
+import { initTaches, renderTaches } from "./taches.js?v=1775499740";
+import { initAssistant, onSectionChanged as onAssistantSection } from "./assistant.js?v=1775499740";
+import { initGenerer } from "./generer.js?v=1775499740";
+import { initActions, renderTasksList, renderEmptyDetail } from "./actions.js?v=1775499740";
+import { toast, confirmDialog, formDialog, actionMenu } from "./ui.js?v=1775499740";
+import { openPrintView } from "./print.js?v=1775499740";
+import { openTasksView } from "./tasks-view.js?v=1775499740";
 
 const CFG_KEY = "d4_manifeste_cfg_v1";
 const LAST_SECTION_KEY = "d4_manifeste_last_section";
@@ -386,26 +386,7 @@ async function openSectionMenu(e, section) {
   if (!choice) return;
 
   if (choice === "rename") {
-    const newTitle = await promptDialog("Nouveau titre :", {
-      title: "Renommer la section",
-      defaultValue: section.titre,
-      okLabel: "Renommer",
-    });
-    if (!newTitle || newTitle === section.titre) return;
-    section.titre = newTitle;
-    section.updated_at = now();
-    invalidateSortedCache();
-    renderTOC();
-    if (state.activeSectionId === section.id) {
-      el.activeSectionTitle.textContent = newTitle;
-      localState.editor.setValue(section.contenu || "");
-    }
-    try {
-      await saveDataFile("manifeste", `Rename ${section.id} → ${newTitle}`);
-      toast("Section renommée ✓", "success");
-    } catch (err) {
-      toast(err.message, "error");
-    }
+    renameInline(section);
   } else if (["stable", "en_travail", "a_revoir"].includes(choice)) {
     section.statut = choice;
     section.updated_at = now();
@@ -453,6 +434,50 @@ async function openSectionMenu(e, section) {
       toast(err.message, "error");
     }
   }
+}
+
+// =========================================================================
+// RENOMMER INLINE (directement dans la TOC)
+// =========================================================================
+function renameInline(section) {
+  const item = el.tocList.querySelector(`.toc-item[data-id="${section.id}"]`);
+  if (!item) return;
+  const titleSpan = item.querySelector(".toc-title");
+  if (!titleSpan) return;
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.value = section.titre;
+  input.className = "toc-rename-input";
+  titleSpan.replaceWith(input);
+  input.focus();
+  input.select();
+
+  const commit = async () => {
+    const newTitle = input.value.trim();
+    if (newTitle && newTitle !== section.titre) {
+      section.titre = newTitle;
+      section.updated_at = now();
+      invalidateSortedCache();
+      if (state.activeSectionId === section.id) {
+        el.activeSectionTitle.textContent = newTitle;
+        localState.editor.setValue(section.contenu || "");
+      }
+      try {
+        await saveDataFile("manifeste", `Rename ${section.id}`);
+        toast("Section renommée ✓", "success");
+      } catch (err) {
+        toast(err.message, "error");
+      }
+    }
+    renderTOC();
+  };
+
+  input.addEventListener("blur", commit);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); input.blur(); }
+    if (e.key === "Escape") { renderTOC(); }
+  });
 }
 
 // =========================================================================

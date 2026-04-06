@@ -3,8 +3,8 @@
    Ouvre une nouvelle fenêtre avec le doc entier, prête à « Enregistrer en PDF ».
    ========================================================================= */
 
-import { state, sortHierarchically } from "./store.js?v=1775499502";
-import { toast } from "./ui.js?v=1775499502";
+import { state, sortHierarchically } from "./store.js?v=1775499740";
+import { toast } from "./ui.js?v=1775499740";
 
 /**
  * Point d'entrée : ouvre la fenêtre d'impression.
