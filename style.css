@@ -227,7 +227,15 @@ a:hover {
   box-shadow: var(--shadow-sm);
 }
 
-/* Basculement des contenus par mode */
+/* Wrappers de contenu par mode — doivent rester des flex containers pour le scroll */
+.manifeste-content,
+.actions-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
 [data-mode="manifeste"] .actions-content { display: none !important; }
 [data-mode="actions"] .manifeste-content { display: none !important; }
 .header-center {

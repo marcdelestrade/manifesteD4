@@ -2,8 +2,8 @@
    app.js — Orchestration D4 Manifeste
    ========================================================================= */
 
-import * as gh from "./github.js?v=1775499434";
-import { createEditor } from "./editor.js?v=1775499434";
+import * as gh from "./github.js?v=1775499502";
+import { createEditor } from "./editor.js?v=1775499502";
 import {
   state,
   setStatusHandler,
@@ -11,14 +11,14 @@ import {
   activeSection,
   sortHierarchically,
   now,
-} from "./store.js?v=1775499434";
-import { initTaches, renderTaches } from "./taches.js?v=1775499434";
-import { initAssistant, onSectionChanged as onAssistantSection } from "./assistant.js?v=1775499434";
-import { initGenerer } from "./generer.js?v=1775499434";
-import { initActions, renderTasksList, renderEmptyDetail } from "./actions.js?v=1775499434";
-import { toast, confirmDialog, formDialog, actionMenu } from "./ui.js?v=1775499434";
-import { openPrintView } from "./print.js?v=1775499434";
-import { openTasksView } from "./tasks-view.js?v=1775499434";
+} from "./store.js?v=1775499502";
+import { initTaches, renderTaches } from "./taches.js?v=1775499502";
+import { initAssistant, onSectionChanged as onAssistantSection } from "./assistant.js?v=1775499502";
+import { initGenerer } from "./generer.js?v=1775499502";
+import { initActions, renderTasksList, renderEmptyDetail } from "./actions.js?v=1775499502";
+import { toast, confirmDialog, formDialog, actionMenu } from "./ui.js?v=1775499502";
+import { openPrintView } from "./print.js?v=1775499502";
+import { openTasksView } from "./tasks-view.js?v=1775499502";
 
 const CFG_KEY = "d4_manifeste_cfg_v1";
 const LAST_SECTION_KEY = "d4_manifeste_last_section";
