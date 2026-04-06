@@ -285,6 +285,23 @@ a:hover {
   overflow: hidden;
 }
 
+/* ========== Resize handles ========== */
+.resize-handle {
+  width: 5px;
+  cursor: col-resize;
+  background: transparent;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+  transition: background 0.15s;
+}
+.resize-handle:hover,
+.resize-handle.dragging {
+  background: var(--c-accent);
+  opacity: 0.4;
+}
+.resize-handle.dragging { opacity: 0.6; }
+
 /* ========== Colonne gauche : TOC ========== */
 .col-left {
   width: var(--col-left-w);
@@ -1662,6 +1679,7 @@ kbd {
 
 /* Tablette : masquer colonne droite, rendre TOC repliable */
 @media (max-width: 1024px) {
+  .resize-handle { display: none; }
   .col-right {
     display: none;
   }

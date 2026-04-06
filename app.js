@@ -2,8 +2,8 @@
    app.js — Orchestration D4 Manifeste
    ========================================================================= */
 
-import * as gh from "./github.js?v=1775497992";
-import { createEditor } from "./editor.js?v=1775497992";
+import * as gh from "./github.js?v=1775498583";
+import { createEditor } from "./editor.js?v=1775498583";
 import {
   state,
   setStatusHandler,
@@ -11,14 +11,14 @@ import {
   activeSection,
   sortHierarchically,
   now,
-} from "./store.js?v=1775497992";
-import { initTaches, renderTaches } from "./taches.js?v=1775497992";
-import { initAssistant, onSectionChanged as onAssistantSection } from "./assistant.js?v=1775497992";
-import { initGenerer } from "./generer.js?v=1775497992";
-import { initActions, renderTasksList, renderEmptyDetail } from "./actions.js?v=1775497992";
-import { toast, confirmDialog, formDialog, actionMenu } from "./ui.js?v=1775497992";
-import { openPrintView } from "./print.js?v=1775497992";
-import { openTasksView } from "./tasks-view.js?v=1775497992";
+} from "./store.js?v=1775498583";
+import { initTaches, renderTaches } from "./taches.js?v=1775498583";
+import { initAssistant, onSectionChanged as onAssistantSection } from "./assistant.js?v=1775498583";
+import { initGenerer } from "./generer.js?v=1775498583";
+import { initActions, renderTasksList, renderEmptyDetail } from "./actions.js?v=1775498583";
+import { toast, confirmDialog, formDialog, actionMenu } from "./ui.js?v=1775498583";
+import { openPrintView } from "./print.js?v=1775498583";
+import { openTasksView } from "./tasks-view.js?v=1775498583";
 
 const CFG_KEY = "d4_manifeste_cfg_v1";
 const LAST_SECTION_KEY = "d4_manifeste_last_section";
@@ -517,6 +517,7 @@ function bindUI() {
     showConfig();
   });
   $("#btn-help").addEventListener("click", showShortcuts);
+  initResizeHandles();
   $("#btn-print").addEventListener("click", openPrintView);
   $("#btn-tasks-view").addEventListener("click", openTasksView);
   el.btnToggleMode.addEventListener("click", toggleEditMode);
@@ -559,6 +560,85 @@ function switchMode(mode) {
     renderTasksList();
     renderEmptyDetail();
   }
+}
+
+// =========================================================================
+// VOLETS REDIMENSIONNABLES
+// =========================================================================
+const RESIZE_KEY = "d4_manifeste_col_widths";
+const COL_MIN_LEFT = 180;
+const COL_MIN_RIGHT = 200;
+const COL_MAX_LEFT = 420;
+const COL_MAX_RIGHT = 500;
+
+function initResizeHandles() {
+  // Restaurer les largeurs depuis localStorage
+  const saved = localStorage.getItem(RESIZE_KEY);
+  if (saved) {
+    try {
+      const { left, right } = JSON.parse(saved);
+      if (left) document.documentElement.style.setProperty("--col-left-w", left + "px");
+      if (right) document.documentElement.style.setProperty("--col-right-w", right + "px");
+    } catch {}
+  }
+
+  setupHandle($("#resize-left"), "--col-left-w", COL_MIN_LEFT, COL_MAX_LEFT, false);
+  setupHandle($("#resize-right"), "--col-right-w", COL_MIN_RIGHT, COL_MAX_RIGHT, true);
+}
+
+function setupHandle(handle, cssVar, min, max, fromRight) {
+  if (!handle) return;
+  let startX, startW;
+
+  const onStart = (clientX) => {
+    startX = clientX;
+    startW = parseInt(getComputedStyle(document.documentElement).getPropertyValue(cssVar), 10);
+    handle.classList.add("dragging");
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  };
+  const onMove = (clientX) => {
+    const delta = fromRight ? startX - clientX : clientX - startX;
+    const newW = Math.max(min, Math.min(max, startW + delta));
+    document.documentElement.style.setProperty(cssVar, newW + "px");
+  };
+  const onEnd = () => {
+    handle.classList.remove("dragging");
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+    // Sauvegarder
+    const left = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--col-left-w"), 10);
+    const right = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--col-right-w"), 10);
+    localStorage.setItem(RESIZE_KEY, JSON.stringify({ left, right }));
+  };
+
+  // Mouse
+  handle.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    onStart(e.clientX);
+    const move = (ev) => onMove(ev.clientX);
+    const up = () => {
+      onEnd();
+      document.removeEventListener("mousemove", move);
+      document.removeEventListener("mouseup", up);
+    };
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", up);
+  });
+
+  // Touch
+  handle.addEventListener("touchstart", (e) => {
+    const touch = e.touches[0];
+    onStart(touch.clientX);
+    const move = (ev) => onMove(ev.touches[0].clientX);
+    const up = () => {
+      onEnd();
+      document.removeEventListener("touchmove", move);
+      document.removeEventListener("touchend", up);
+    };
+    document.addEventListener("touchmove", move);
+    document.addEventListener("touchend", up);
+  }, { passive: true });
 }
 
 function handleShortcuts(e) {
