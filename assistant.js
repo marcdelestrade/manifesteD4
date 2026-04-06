@@ -3,9 +3,9 @@
    Streaming Anthropic + injection de contexte + mémorisation de décisions.
    ========================================================================= */
 
-import { state, saveDataFile, activeSection, uid, now } from "./store.js?v=1775498975";
-import { streamMessage } from "./anthropic.js?v=1775498975";
-import { toast, promptDialog, confirmDialog } from "./ui.js?v=1775498975";
+import { state, saveDataFile, activeSection, uid, now } from "./store.js?v=1775499290";
+import { streamMessage } from "./anthropic.js?v=1775499290";
+import { toast, promptDialog, confirmDialog } from "./ui.js?v=1775499290";
 
 const MAX_MESSAGES = 20; // 10 échanges max par section (cap des coûts tokens)
 
@@ -341,10 +341,20 @@ async function applyToManifeste(aiText) {
     if (!contenu) return;
   }
 
+  // Détection automatique d'un titre en début de contenu (# / ## / ###)
+  if (!titre) {
+    const headingMatch = contenu.match(/^(#{1,3})\s+(.+?)$/m);
+    if (headingMatch && contenu.indexOf(headingMatch[0]) < 5) {
+      titre = headingMatch[2].trim();
+      // Retirer le heading du contenu (il deviendra section.titre)
+      contenu = contenu.slice(headingMatch[0].length).trim();
+    }
+  }
+
   // Confirmation
   const summary = contenu.slice(0, 120) + (contenu.length > 120 ? "…" : "");
   const msg = titre
-    ? `Remplacer le titre ET le contenu de « ${section.titre} » ?\n\nNouveau titre : ${titre}\nAperçu contenu : ${summary}`
+    ? `Remplacer le titre ET le contenu de « ${section.titre} » ?\n\nNouveau titre : ${titre}\nAperçu : ${summary}`
     : `Remplacer le contenu de « ${section.titre} » ?\n\nAperçu : ${summary}`;
   const ok = await confirmDialog(msg, {
     title: "Appliquer au manifeste",
