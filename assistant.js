@@ -3,9 +3,9 @@
    Streaming Anthropic + injection de contexte + mémorisation de décisions.
    ========================================================================= */
 
-import { state, saveDataFile, activeSection, uid, now } from "./store.js?v=1775495410";
-import { streamMessage } from "./anthropic.js?v=1775495410";
-import { toast, promptDialog, confirmDialog } from "./ui.js?v=1775495410";
+import { state, saveDataFile, activeSection, uid, now } from "./store.js?v=1775497534";
+import { streamMessage } from "./anthropic.js?v=1775497534";
+import { toast, promptDialog, confirmDialog } from "./ui.js?v=1775497534";
 
 const MAX_MESSAGES = 20; // 10 échanges max par section (cap des coûts tokens)
 
@@ -487,11 +487,21 @@ ${decisionsSection}
 
 TÂCHES LIÉES :
 ${tachesSection}
-
-PROJETS LIÉS :
-${projetsSection}
-
+${activeTaskBlock()}
 Tu dois challenger, conseiller, reformuler. Sois direct, précis, sans complaisance. Propose des alternatives concrètes. Si une idée est mauvaise, dis-le et explique pourquoi. Réponses courtes et structurées en markdown.`;
 
   return [{ type: "text", text, cache_control: { type: "ephemeral" } }];
+}
+
+function activeTaskBlock() {
+  if (!state.activeTaskId) return "";
+  const t = state.taches?.data?.taches?.find((x) => x.id === state.activeTaskId);
+  if (!t) return "";
+  return `
+TÂCHE ACTIVE EN COURS DE TRAVAIL :
+- Label : ${t.label}
+- Statut : ${t.statut}
+- Priorité : ${t.priorite}
+- Description : ${t.description || "(vide)"}
+`;
 }

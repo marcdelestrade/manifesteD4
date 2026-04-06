@@ -2,8 +2,8 @@
    app.js — Orchestration D4 Manifeste
    ========================================================================= */
 
-import * as gh from "./github.js?v=1775495410";
-import { createEditor } from "./editor.js?v=1775495410";
+import * as gh from "./github.js?v=1775497534";
+import { createEditor } from "./editor.js?v=1775497534";
 import {
   state,
   setStatusHandler,
@@ -11,14 +11,14 @@ import {
   activeSection,
   sortHierarchically,
   now,
-} from "./store.js?v=1775495410";
-import { initTaches, renderTaches } from "./taches.js?v=1775495410";
-import { initProjets, renderProjets } from "./projets.js?v=1775495410";
-import { initAssistant, onSectionChanged as onAssistantSection } from "./assistant.js?v=1775495410";
-import { initGenerer } from "./generer.js?v=1775495410";
-import { toast, confirmDialog, formDialog, actionMenu } from "./ui.js?v=1775495410";
-import { openPrintView } from "./print.js?v=1775495410";
-import { openTasksView } from "./tasks-view.js?v=1775495410";
+} from "./store.js?v=1775497534";
+import { initTaches, renderTaches } from "./taches.js?v=1775497534";
+import { initAssistant, onSectionChanged as onAssistantSection } from "./assistant.js?v=1775497534";
+import { initGenerer } from "./generer.js?v=1775497534";
+import { initActions, renderTasksList, renderEmptyDetail } from "./actions.js?v=1775497534";
+import { toast, confirmDialog, formDialog, actionMenu } from "./ui.js?v=1775497534";
+import { openPrintView } from "./print.js?v=1775497534";
+import { openTasksView } from "./tasks-view.js?v=1775497534";
 
 const CFG_KEY = "d4_manifeste_cfg_v1";
 const LAST_SECTION_KEY = "d4_manifeste_last_section";
@@ -56,11 +56,11 @@ const el = {
   btnPrevMobile: $("#btn-prev-mobile"),
   btnNextMobile: $("#btn-next-mobile"),
   countTaches: $("#count-taches"),
-  countProjets: $("#count-projets"),
 };
 
 // Local state (non-shared)
 let localState = {
+  mode: "manifeste", // 'manifeste' | 'actions'
   tocFilter: "all",
   tocSearch: "",
   editor: null,
@@ -164,11 +164,9 @@ async function startApp() {
   initTaches((count) => {
     el.countTaches.textContent = count;
   });
-  initProjets((count) => {
-    el.countProjets.textContent = count;
-  });
   initAssistant();
   initGenerer();
+  initActions();
   renderTOC();
 
   // Restaurer la dernière section visitée ou tomber sur la première H1
@@ -329,7 +327,6 @@ function selectSection(id) {
   }
 
   renderTaches();
-  renderProjets();
   onAssistantSection();
   updateNavButtons();
 }
@@ -450,6 +447,23 @@ function bindUI() {
     }, SEARCH_DEBOUNCE_MS);
   });
 
+  // Mode toggle Manifeste / Actions
+  $$(".mode-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const mode = btn.dataset.mode;
+      switchMode(mode);
+    });
+  });
+
+  // Événements cross-modules
+  document.addEventListener("section-changed-for-ia", () => {
+    onAssistantSection();
+  });
+  document.addEventListener("goto-manifeste-section", (e) => {
+    switchMode("manifeste");
+    selectSection(e.detail.sectionId);
+  });
+
   // Event delegation : un seul listener sur la liste TOC
   el.tocList.addEventListener("click", (e) => {
     const item = e.target.closest(".toc-item");
@@ -523,7 +537,28 @@ function bindUI() {
   document.addEventListener("taches-changed", () => {
     renderTaches();
     renderTOC();
+    if (localState.mode === "actions") renderTasksList();
   });
+}
+
+// =========================================================================
+// MODE SWITCH
+// =========================================================================
+function switchMode(mode) {
+  if (localState.mode === mode) return;
+  localState.mode = mode;
+  const app = $("#app");
+  app.dataset.mode = mode;
+
+  // Highlight le bouton actif
+  $$(".mode-btn").forEach((b) =>
+    b.classList.toggle("active", b.dataset.mode === mode)
+  );
+
+  if (mode === "actions") {
+    renderTasksList();
+    renderEmptyDetail();
+  }
 }
 
 function handleShortcuts(e) {

@@ -3,7 +3,7 @@
    Importé par tous les modules feature.
    ========================================================================= */
 
-import * as gh from "./github.js?v=1775495410";
+import * as gh from "./github.js?v=1775497534";
 
 export const state = {
   cfg: null, // { owner, repo, token, anthropicKey }
@@ -13,6 +13,7 @@ export const state = {
   memoire: null, // { data: {...}, sha }
   conversations: null, // { data: { bySection: {...} }, sha }
   activeSectionId: null,
+  activeTaskId: null,
   aiMessages: [], // conversation de la section active (chargée depuis conversations.json)
 };
 

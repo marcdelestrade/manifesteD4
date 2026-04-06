@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>D4 Manifeste</title>
-    <link rel="stylesheet" href="style.css?v=1775495410" />
+    <link rel="stylesheet" href="style.css?v=1775497534" />
     <!-- Marked.js pour le rendu markdown (CDN, runtime) -->
     <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
   </head>
@@ -43,12 +43,15 @@
     </div>
 
     <!-- Application principale -->
-    <div id="app" class="app hidden">
+    <div id="app" class="app hidden" data-mode="manifeste">
       <!-- Header -->
       <header class="app-header">
         <div class="header-left">
           <div class="logo">D4</div>
-          <h1 class="app-title">Manifeste</h1>
+          <div class="mode-toggle">
+            <button class="mode-btn active" data-mode="manifeste">Manifeste</button>
+            <button class="mode-btn" data-mode="actions">Actions</button>
+          </div>
         </div>
         <div class="header-center">
           <span id="active-section-title" class="active-section-title"></span>
@@ -61,128 +64,134 @@
 
       <!-- Corps 3 colonnes -->
       <div class="app-body">
-        <!-- Colonne gauche : TOC -->
+        <!-- ============ Colonne gauche ============ -->
         <aside class="col-left" id="col-left">
-          <div class="toc-header">
-            <input type="search" id="toc-search" placeholder="Rechercher…" />
-            <div class="toc-filters">
-              <button class="filter-btn active" data-filter="all">Toutes</button>
-              <button class="filter-btn" data-filter="actives">Actives</button>
+          <!-- MODE MANIFESTE : TOC -->
+          <div class="manifeste-content">
+            <div class="toc-header">
+              <input type="search" id="toc-search" placeholder="Rechercher…" />
+              <div class="toc-filters">
+                <button class="filter-btn active" data-filter="all">Toutes</button>
+                <button class="filter-btn" data-filter="actives">Actives</button>
+              </div>
+            </div>
+            <nav class="toc-list" id="toc-list" aria-label="Table des matières"></nav>
+            <div class="toc-footer">
+              <button id="btn-add-section" class="btn-add">＋ Ajouter une section</button>
             </div>
           </div>
-          <nav class="toc-list" id="toc-list" aria-label="Table des matières">
-            <!-- Généré par JS -->
-          </nav>
-          <div class="toc-footer">
-            <button id="btn-add-section" class="btn-add">＋ Ajouter une section</button>
+          <!-- MODE ACTIONS : liste des tâches -->
+          <div class="actions-content">
+            <div class="tasks-header">
+              <input type="search" id="tasks-search" placeholder="Rechercher une tâche…" />
+              <select id="tasks-filter-statut">
+                <option value="active">Actives</option>
+                <option value="all">Toutes</option>
+                <option value="a_faire">À faire</option>
+                <option value="en_cours">En cours</option>
+                <option value="bloque">Bloqué</option>
+                <option value="termine">Terminé</option>
+              </select>
+            </div>
+            <div class="tasks-global-list" id="tasks-global-list"></div>
+            <div class="tasks-footer">
+              <button id="btn-add-task-global" class="btn-add">＋ Ajouter une tâche</button>
+              <button class="btn-secondary" id="btn-tasks-view" title="Exporter en PDF">📋 Exporter PDF</button>
+            </div>
           </div>
         </aside>
 
-        <!-- Colonne centrale : Espace de travail -->
+        <!-- ============ Colonne centrale ============ -->
         <main class="col-center" id="col-center">
-          <div class="tabs">
-            <button class="tab-btn active" data-tab="manifeste">Manifeste</button>
-            <button class="tab-btn" data-tab="taches">Tâches <span class="tab-count" id="count-taches">0</span></button>
-            <button class="tab-btn" data-tab="projets">Projets <span class="tab-count" id="count-projets">0</span></button>
-            <button class="tab-btn" data-tab="generer">Générer</button>
+          <!-- MODE MANIFESTE : éditeur + onglets -->
+          <div class="manifeste-content">
+            <div class="tabs">
+              <button class="tab-btn active" data-tab="manifeste">Manifeste</button>
+              <button class="tab-btn" data-tab="taches">Tâches <span class="tab-count" id="count-taches">0</span></button>
+              <button class="tab-btn" data-tab="generer">Générer</button>
+            </div>
+
+            <!-- Onglet Manifeste -->
+            <section class="tab-panel active" id="tab-manifeste">
+              <div class="editor-toolbar">
+                <div class="toolbar-md-buttons">
+                  <button class="editor-btn" data-md="bold" title="Gras"><strong>B</strong></button>
+                  <button class="editor-btn" data-md="italic" title="Italique"><em>I</em></button>
+                  <button class="editor-btn" data-md="h2" title="Titre H2">H2</button>
+                  <button class="editor-btn" data-md="h3" title="Titre H3">H3</button>
+                  <button class="editor-btn" data-md="list" title="Liste">•</button>
+                  <button class="editor-btn" data-md="quote" title="Citation">"</button>
+                  <button class="editor-btn" data-md="hr" title="Séparateur">―</button>
+                </div>
+                <div class="toolbar-spacer"></div>
+                <button class="btn-toggle-mode" id="btn-toggle-mode" title="Basculer lecture / édition">
+                  <span class="icon">✏️</span><span class="label">Modifier</span>
+                </button>
+              </div>
+              <div class="editor-split read-mode" id="editor-split">
+                <textarea id="editor-textarea" spellcheck="true" placeholder="Contenu markdown…"></textarea>
+                <div id="editor-preview" class="editor-preview markdown-body"></div>
+              </div>
+            </section>
+
+            <!-- Onglet Tâches (section) -->
+            <section class="tab-panel" id="tab-taches">
+              <div class="crud-header">
+                <input type="text" id="tache-quick-add" placeholder="Nouvelle tâche — Entrée pour ajouter" />
+              </div>
+              <div class="crud-list" id="taches-list"></div>
+            </section>
+
+            <!-- Onglet Générer -->
+            <section class="tab-panel" id="tab-generer">
+              <div class="generer-controls">
+                <label>
+                  Type de génération
+                  <select id="generer-type">
+                    <option value="guide">Guide pratique (collaborateurs)</option>
+                    <option value="faq">FAQ (clients / CS)</option>
+                    <option value="html">Page HTML (site D4)</option>
+                    <option value="resume">Résumé exécutif</option>
+                    <option value="formation">Points de formation</option>
+                  </select>
+                </label>
+                <label>
+                  Précisions (optionnel)
+                  <textarea id="generer-precisions" rows="2" placeholder="en insistant sur… / pour un public de…"></textarea>
+                </label>
+                <button class="btn-primary" id="btn-generer">Générer</button>
+              </div>
+              <div class="generer-result markdown-body" id="generer-result"></div>
+              <div class="generer-actions hidden" id="generer-actions">
+                <button class="btn-secondary" id="btn-copy">Copier</button>
+                <button class="btn-secondary" id="btn-dl-md">Télécharger .md</button>
+                <button class="btn-secondary" id="btn-dl-html">Télécharger .html</button>
+              </div>
+            </section>
           </div>
 
-          <!-- Onglet Manifeste -->
-          <section class="tab-panel active" id="tab-manifeste">
-            <div class="editor-toolbar">
-              <div class="toolbar-md-buttons">
-                <button class="editor-btn" data-md="bold" title="Gras (⌘B)"><strong>B</strong></button>
-                <button class="editor-btn" data-md="italic" title="Italique (⌘I)"><em>I</em></button>
-                <button class="editor-btn" data-md="h2" title="Titre H2">H2</button>
-                <button class="editor-btn" data-md="h3" title="Titre H3">H3</button>
-                <button class="editor-btn" data-md="list" title="Liste">•</button>
-                <button class="editor-btn" data-md="quote" title="Citation">"</button>
-                <button class="editor-btn" data-md="hr" title="Séparateur">―</button>
-              </div>
-              <div class="toolbar-spacer"></div>
-              <button class="btn-toggle-mode" id="btn-toggle-mode" title="Basculer lecture / édition">
-                <span class="icon">✏️</span><span class="label">Modifier</span>
-              </button>
-            </div>
-            <div class="editor-split read-mode" id="editor-split">
-              <textarea id="editor-textarea" spellcheck="true" placeholder="Contenu markdown…"></textarea>
-              <div id="editor-preview" class="editor-preview markdown-body"></div>
-            </div>
-          </section>
-
-          <!-- Onglet Tâches -->
-          <section class="tab-panel" id="tab-taches">
-            <div class="crud-header crud-header-row">
-              <input
-                type="text"
-                id="tache-quick-add"
-                placeholder="Nouvelle tâche — Entrée pour ajouter"
-              />
-              <button class="btn-secondary" id="btn-tasks-view" title="Voir toutes les tâches dans une vue imprimable">📋 Voir tout</button>
-            </div>
-            <div class="crud-list" id="taches-list"></div>
-          </section>
-
-          <!-- Onglet Projets -->
-          <section class="tab-panel" id="tab-projets">
-            <div class="crud-header">
-              <button class="btn-primary" id="btn-add-projet">＋ Nouveau projet</button>
-            </div>
-            <div class="crud-list" id="projets-list"></div>
-          </section>
-
-          <!-- Onglet Générer -->
-          <section class="tab-panel" id="tab-generer">
-            <div class="generer-controls">
-              <label>
-                Type de génération
-                <select id="generer-type">
-                  <option value="guide">Guide pratique (collaborateurs)</option>
-                  <option value="faq">FAQ (clients / CS)</option>
-                  <option value="html">Page HTML (site D4)</option>
-                  <option value="resume">Résumé exécutif</option>
-                  <option value="formation">Points de formation</option>
-                </select>
-              </label>
-              <label>
-                Précisions (optionnel)
-                <textarea
-                  id="generer-precisions"
-                  rows="2"
-                  placeholder="en insistant sur… / pour un public de…"
-                ></textarea>
-              </label>
-              <button class="btn-primary" id="btn-generer">Générer</button>
-            </div>
-            <div class="generer-result markdown-body" id="generer-result"></div>
-            <div class="generer-actions hidden" id="generer-actions">
-              <button class="btn-secondary" id="btn-copy">Copier</button>
-              <button class="btn-secondary" id="btn-dl-md">Télécharger .md</button>
-              <button class="btn-secondary" id="btn-dl-html">Télécharger .html</button>
-            </div>
-          </section>
+          <!-- MODE ACTIONS : détail de la tâche -->
+          <div class="actions-content" id="task-detail-panel">
+            <div class="empty">Sélectionne une tâche à gauche pour la travailler.</div>
+          </div>
         </main>
 
-        <!-- Colonne droite : Assistant IA -->
+        <!-- ============ Colonne droite : Assistant IA (partagé) ============ -->
         <aside class="col-right" id="col-right">
           <div class="ai-header">
             <span>Assistant IA</span>
-            <button class="btn-icon" id="btn-ai-clear" title="Nouvelle conversation">↻</button>
+            <button class="btn-icon" id="btn-ai-clear" title="Effacer la conversation de cette section">↻</button>
           </div>
           <div class="ai-messages" id="ai-messages"></div>
           <div class="ai-suggestions" id="ai-suggestions"></div>
           <div class="ai-input-zone">
-            <textarea
-              id="ai-input"
-              rows="2"
-              placeholder="Poser une question… (Cmd+Entrée pour envoyer)"
-            ></textarea>
+            <textarea id="ai-input" rows="2" placeholder="Poser une question… (Cmd+Entrée pour envoyer)"></textarea>
             <button id="ai-send" class="btn-primary">Envoyer</button>
           </div>
         </aside>
       </div>
 
-      <!-- Footer : navigation sections + actions globales -->
+      <!-- Footer : navigation + actions globales -->
       <footer class="app-footer" id="app-footer">
         <button id="btn-prev" class="nav-btn nav-prev" title="Section précédente (←)" disabled>
           <span class="nav-arrow">←</span>
@@ -205,7 +214,7 @@
         </button>
       </footer>
 
-      <!-- Navigation mobile (fusion : prev/next + colonnes) -->
+      <!-- Navigation mobile -->
       <nav class="mobile-nav" id="mobile-nav">
         <button class="mobile-nav-btn nav-edge" id="btn-prev-mobile" aria-label="Section précédente">‹</button>
         <button class="mobile-nav-btn" data-col="left" aria-label="Table des matières">☰</button>
@@ -215,7 +224,6 @@
       </nav>
     </div>
 
-    <!-- Scripts (ES modules) -->
-    <script type="module" src="app.js?v=1775495410"></script>
+    <script type="module" src="app.js?v=1775497534"></script>
   </body>
 </html>
