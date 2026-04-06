@@ -3,8 +3,8 @@
    Ouvre une nouvelle fenêtre listant toutes les tâches groupées par section.
    ========================================================================= */
 
-import { state, sortHierarchically } from "./store.js?v=1775499290";
-import { toast } from "./ui.js?v=1775499290";
+import { state, sortHierarchically } from "./store.js?v=1775499312";
+import { toast } from "./ui.js?v=1775499312";
 
 const STATUT_LABELS = {
   a_faire: "À faire",
