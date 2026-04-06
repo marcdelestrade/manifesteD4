@@ -2,8 +2,8 @@
    taches.js — CRUD des tâches liées à la section active
    ========================================================================= */
 
-import { state, saveDataFile, uid, now } from "./store.js?v=1775498583";
-import { toast, confirmDialog } from "./ui.js?v=1775498583";
+import { state, saveDataFile, uid, now } from "./store.js?v=1775498975";
+import { toast, confirmDialog } from "./ui.js?v=1775498975";
 
 const STATUTS = ["a_faire", "en_cours", "termine", "bloque"];
 const STATUT_LABELS = {

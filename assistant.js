@@ -3,9 +3,9 @@
    Streaming Anthropic + injection de contexte + mémorisation de décisions.
    ========================================================================= */
 
-import { state, saveDataFile, activeSection, uid, now } from "./store.js?v=1775498583";
-import { streamMessage } from "./anthropic.js?v=1775498583";
-import { toast, promptDialog, confirmDialog } from "./ui.js?v=1775498583";
+import { state, saveDataFile, activeSection, uid, now } from "./store.js?v=1775498975";
+import { streamMessage } from "./anthropic.js?v=1775498975";
+import { toast, promptDialog, confirmDialog } from "./ui.js?v=1775498975";
 
 const MAX_MESSAGES = 20; // 10 échanges max par section (cap des coûts tokens)
 
@@ -168,6 +168,12 @@ function renderMessage(m) {
     btnTasks.addEventListener("click", () => extractAndProposeTasks(m.content));
     actions.appendChild(btnTasks);
 
+    const btnApply = document.createElement("button");
+    btnApply.className = "ai-action-btn";
+    btnApply.textContent = "✏️ Appliquer au manifeste";
+    btnApply.addEventListener("click", () => applyToManifeste(m.content));
+    actions.appendChild(btnApply);
+
     wrap.appendChild(actions);
   }
   return wrap;
@@ -308,6 +314,72 @@ JSON :`;
   } catch {
     return [];
   }
+}
+
+// =========================================================================
+// APPLIQUER UNE REFORMULATION AU MANIFESTE
+// =========================================================================
+async function applyToManifeste(aiText) {
+  const section = activeSection();
+  if (!section) {
+    toast("Aucune section active.", "warn");
+    return;
+  }
+
+  // Extraction via balises
+  let contenu = extractBetween(aiText, "---DÉBUT CONTENU---", "---FIN CONTENU---");
+  let titre = extractBetween(aiText, "---TITRE---", "---/TITRE---");
+
+  if (!contenu) {
+    // Fallback : modal éditable avec le texte brut
+    contenu = await promptDialog("Aucune balise détectée. Colle/modifie le texte à appliquer :", {
+      title: "Appliquer au manifeste",
+      defaultValue: aiText,
+      multiline: true,
+      okLabel: "Appliquer",
+    });
+    if (!contenu) return;
+  }
+
+  // Confirmation
+  const summary = contenu.slice(0, 120) + (contenu.length > 120 ? "…" : "");
+  const msg = titre
+    ? `Remplacer le titre ET le contenu de « ${section.titre} » ?\n\nNouveau titre : ${titre}\nAperçu contenu : ${summary}`
+    : `Remplacer le contenu de « ${section.titre} » ?\n\nAperçu : ${summary}`;
+  const ok = await confirmDialog(msg, {
+    title: "Appliquer au manifeste",
+    okLabel: "Appliquer",
+  });
+  if (!ok) return;
+
+  // Appliquer
+  section.contenu = contenu.trim();
+  section.updated_at = now();
+  if (titre) {
+    section.titre = titre.trim();
+  }
+
+  try {
+    await saveDataFile("manifeste", `IA reformulation ${section.id}`);
+    toast("Manifeste mis à jour ✓", "success");
+    // Basculer en mode Manifeste pour voir le résultat
+    document.dispatchEvent(
+      new CustomEvent("goto-manifeste-section", {
+        detail: { sectionId: section.id },
+      })
+    );
+  } catch (err) {
+    toast(err.message, "error");
+  }
+}
+
+function extractBetween(text, startTag, endTag) {
+  const startIdx = text.indexOf(startTag);
+  if (startIdx === -1) return null;
+  const contentStart = startIdx + startTag.length;
+  const endIdx = text.indexOf(endTag, contentStart);
+  if (endIdx === -1) return text.slice(contentStart).trim();
+  return text.slice(contentStart, endIdx).trim() || null;
 }
 
 async function memoriser(texte) {
@@ -500,7 +572,17 @@ ${decisionsSection}
 TÂCHES LIÉES :
 ${tachesSection}
 ${activeTaskBlock()}
-Tu dois challenger, conseiller, reformuler. Sois direct, précis, sans complaisance. Propose des alternatives concrètes. Si une idée est mauvaise, dis-le et explique pourquoi. Réponses courtes et structurées en markdown.`;
+Tu dois challenger, conseiller, reformuler. Sois direct, précis, sans complaisance. Propose des alternatives concrètes. Si une idée est mauvaise, dis-le et explique pourquoi. Réponses courtes et structurées en markdown.
+
+RÈGLE IMPORTANTE — Quand tu proposes une reformulation, réécriture ou nouveau texte pour la section, encadre TOUJOURS le texte proposé avec ces balises exactes (sur leur propre ligne) :
+---DÉBUT CONTENU---
+(le texte markdown prêt à être appliqué, sans commentaire ni préambule)
+---FIN CONTENU---
+Si tu proposes aussi un nouveau titre pour la section, ajoute avant le contenu :
+---TITRE---
+(le nouveau titre)
+---/TITRE---
+Cela permet à Marc d'appliquer directement ta proposition au manifeste en un clic.`;
 
   return [{ type: "text", text, cache_control: { type: "ephemeral" } }];
 }
