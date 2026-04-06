@@ -11,8 +11,8 @@ import {
   sortHierarchically,
   uid,
   now,
-} from "./store.js?v=1775500462";
-import { toast, confirmDialog } from "./ui.js?v=1775500462";
+} from "./store.js?v=1775500573";
+import { toast, confirmDialog } from "./ui.js?v=1775500573";
 
 const STATUT_ORDER = ["a_faire", "en_cours", "bloque", "termine"];
 const STATUT_LABELS = {

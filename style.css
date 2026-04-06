@@ -1640,10 +1640,12 @@ kbd {
 .task-title-input {
   font-size: 18px !important;
   font-weight: 600;
-  line-height: 1.3;
+  line-height: 1.35 !important;
+  min-height: auto !important;
   resize: none;
-  overflow: hidden;
-  min-height: 32px;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  field-sizing: content; /* CSS natif : textarea s'ajuste au contenu (Safari 17.4+) */
 }
 .task-detail-field textarea {
   resize: vertical;
