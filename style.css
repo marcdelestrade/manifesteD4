@@ -202,14 +202,8 @@ a:hover {
 .logo {
   width: 28px;
   height: 28px;
-  background: var(--c-accent);
-  color: white;
   border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 12px;
+  object-fit: contain;
 }
 /* Mode toggle Manifeste / Actions */
 .mode-toggle {
